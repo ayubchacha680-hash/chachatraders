@@ -94,8 +94,13 @@ export default defineConfig({
   html: { template: './index.html' },
   server: {
     compress: true,
+    host: '0.0.0.0',
   },
-  dev: { hmr: true },
+  dev: {
+    hmr: true,
+    // Allow Replit's proxied preview domain alongside localhost
+    client: { host: process.env.REPLIT_DEV_DOMAIN ?? 'localhost' },
+  },
   tools: {
     rspack: {
       module: {

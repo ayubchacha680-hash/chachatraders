@@ -1,0 +1,265 @@
+.dcircles {
+    padding: 1.6rem;
+    overflow-y: auto;
+    height: var(--tab-content-height, calc(100vh - 12rem));
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+
+    &__toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1.6rem;
+        padding: 1.2rem 1.6rem;
+        border-radius: 0.8rem;
+        background: var(--general-main-1);
+        border: 1px solid var(--general-section-2);
+    }
+
+    &__control {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    &__label {
+        font-size: 1.1rem;
+        color: var(--text-less-prominent);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    &__select {
+        min-width: 22rem;
+        padding: 0.8rem 1rem;
+        border: 1px solid var(--general-section-2);
+        border-radius: 0.6rem;
+        background: var(--general-section-1);
+        color: var(--text-general);
+        font-size: 1.4rem;
+        cursor: pointer;
+
+        &:focus { outline: none; border-color: #87ceeb; }
+    }
+
+    &__meta {
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        margin-inline-start: auto;
+        flex-wrap: wrap;
+    }
+
+    &__meta-text {
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__status {
+        padding: 0.3rem 1rem;
+        border-radius: 2rem;
+        font-size: 1.2rem;
+        font-weight: 600;
+        background: var(--general-section-1);
+        color: var(--text-less-prominent);
+
+        &--open   { background: #16c78422; color: #16c784; }
+        &--connecting, &--reconnecting { background: #ffb30022; color: #ffb300; }
+        &--closed { background: #e5393522; color: #e53935; }
+    }
+
+    /* Legend */
+    &__legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.2rem;
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        &::before {
+            content: '';
+            display: inline-block;
+            width: 1.2rem;
+            height: 1.2rem;
+            border-radius: 50%;
+            background: var(--dot-color, #ccc);
+            border: 1px solid rgb(0 0 0 / 20%);
+        }
+
+        &--tick::before { display: none; }
+    }
+
+    /* Stage */
+    &__stage {
+        position: relative;
+        padding-top: 3.6rem; /* space for triangle */
+        overflow-x: auto;
+    }
+
+    &__triangle-wrap {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 88px;
+        transition: transform 160ms cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+    }
+
+    &__triangle {
+        width: 0;
+        height: 0;
+        margin: 0 auto;
+        border-left: 12px solid transparent;
+        border-right: 12px solid transparent;
+        border-top: 18px solid #87ceeb;
+        filter: drop-shadow(0 2px 6px #87ceeb88);
+    }
+
+    &__row {
+        display: flex;
+        gap: 0.8rem;
+        min-width: max-content;
+    }
+
+    &__slot {
+        width: 80px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        &--active .dcircles__circle {
+            transform: scale(1.08);
+        }
+    }
+
+    &__circle {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.1rem;
+        position: relative;
+        transition: transform 160ms ease, box-shadow 160ms ease;
+        border: 2px solid rgb(0 0 0 / 15%);
+        cursor: default;
+    }
+
+    &__digit {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    &__pct {
+        font-size: 1rem;
+        font-weight: 600;
+        opacity: 0.92;
+        line-height: 1;
+    }
+
+    &__tick {
+        position: absolute;
+        top: -8px;
+        right: -4px;
+        width: 1.8rem;
+        height: 1.8rem;
+        background: #111;
+        color: #fff;
+        border-radius: 50%;
+        font-size: 1rem;
+        font-weight: 900;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 4px rgb(0 0 0 / 40%);
+    }
+
+    /* Table */
+    &__table-wrap {
+        border-radius: 0.8rem;
+        overflow: hidden;
+        border: 1px solid var(--general-section-2);
+        flex-shrink: 0;
+    }
+
+    &__table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--general-main-1);
+        font-size: 1.3rem;
+
+        th, td {
+            padding: 0.8rem 1.2rem;
+            text-align: left;
+            border-bottom: 1px solid var(--general-section-2);
+        }
+
+        th {
+            background: var(--general-section-1);
+            color: var(--text-less-prominent);
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        tr:last-child td { border-bottom: none; }
+    }
+
+    &__table-row--active {
+        background: rgb(135 206 235 / 8%) !important;
+    }
+
+    &__table-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.8rem;
+        height: 2.8rem;
+        border-radius: 50%;
+        font-weight: 800;
+        font-size: 1.4rem;
+        border: 1px solid rgb(0 0 0 / 15%);
+    }
+
+    &__table-tick {
+        margin-inline-start: 0.4rem;
+        color: #333;
+        font-size: 1rem;
+        background: #111;
+        color: #fff;
+        border-radius: 50%;
+        width: 1.6rem;
+        height: 1.6rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        vertical-align: middle;
+    }
+
+    &__bar-cell { width: 30%; }
+
+    &__bar-bg {
+        height: 0.8rem;
+        border-radius: 0.4rem;
+        background: var(--general-section-1);
+        overflow: hidden;
+    }
+
+    &__bar-fill {
+        height: 100%;
+        border-radius: 0.4rem;
+        transition: width 300ms ease;
+    }
+}

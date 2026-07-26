@@ -9,6 +9,8 @@ import OnboardTourHandler from '../tutorials/dbot-tours/onboarding-tour';
 import Announcements from './announcements';
 import Cards from './cards';
 import InfoPanel from './info-panel';
+import './dashboard.scss';
+import './dashboard-extra.scss';
 
 type TMobileIconGuide = {
     handleTabChange: (active_number: number) => void;
@@ -29,7 +31,8 @@ const DashboardComponent = observer(({ handleTabChange }: TMobileIconGuide) => {
                     'tab__dashboard--tour-active': active_tour,
                 })}
             >
-                <div className='tab__dashboard__content'>
+                {/* ── Green header band ── */}
+                <div className='tab__dashboard__green-header'>
                     {client.is_logged_in && (
                         <Announcements is_mobile={!isDesktop} is_tablet={isTablet} handleTabChange={handleTabChange} />
                     )}
@@ -43,20 +46,20 @@ const DashboardComponent = observer(({ handleTabChange }: TMobileIconGuide) => {
                                 <Text
                                     className='title'
                                     as='h2'
-                                    color='prominent'
                                     size={isDesktop ? 'sm' : 's'}
                                     lineHeight='xxl'
                                     weight='bold'
+                                    style={{ color: '#fff' }}
                                 >
                                     {localize('Load or build your bot')}
                                 </Text>
                             )}
                             <Text
                                 as='p'
-                                color='prominent'
                                 lineHeight='s'
                                 size={isDesktop ? 's' : 'xxs'}
                                 className={classNames('subtitle', { 'subtitle__has-list': has_dashboard_strategies })}
+                                style={{ color: 'rgba(255,255,255,0.80)' }}
                             >
                                 {is_google_drive_configured
                                     ? localize(
@@ -67,8 +70,12 @@ const DashboardComponent = observer(({ handleTabChange }: TMobileIconGuide) => {
                                       )}
                             </Text>
                         </div>
-                        <Cards has_dashboard_strategies={has_dashboard_strategies} is_mobile={!isDesktop} />
                     </div>
+                </div>
+
+                {/* ── Cards below green band ── */}
+                <div className='tab__dashboard__content'>
+                    <Cards has_dashboard_strategies={has_dashboard_strategies} is_mobile={!isDesktop} />
                 </div>
             </div>
             <InfoPanel />

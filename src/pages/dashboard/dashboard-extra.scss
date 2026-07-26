@@ -1,0 +1,31 @@
+/* Dashboard green header band */
+.tab__dashboard__green-header {
+    background: linear-gradient(135deg, #00804a 0%, #00a854 50%, #00c85a 100%);
+    padding: 1.6rem 2rem 2rem;
+    width: 100%;
+    box-shadow: 0 4px 20px rgb(0 128 74 / 30%);
+
+    .tab__dashboard__header {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+    }
+
+    .title {
+        color: #fff !important;
+        text-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+    }
+
+    .subtitle {
+        color: rgba(255, 255, 255, 0.85) !important;
+    }
+
+    /* Announcements inside green band */
+    .announcements {
+        color: rgba(255, 255, 255, 0.9);
+    }
+}
+
+.tab__dashboard__content {
+    padding: 0;
+}

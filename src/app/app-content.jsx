@@ -13,6 +13,7 @@ import { useApiBase } from '@/hooks/useApiBase';
 import useDevMode from '@/hooks/useDevMode';
 import { useStore } from '@/hooks/useStore';
 import useThemeSwitcher from '@/hooks/useThemeSwitcher';
+import { isDerivAppIdConfigured } from '@/utils/deriv-app-id';
 import { isPreviewMode } from '@/utils/is-preview-mode';
 import { ThemeProvider } from '@deriv-com/quill-ui';
 import { setSmartChartsPublicPath } from '@deriv-com/smartcharts-champion';
@@ -49,13 +50,15 @@ const AppContent = observer(() => {
     // Initialize dev mode keyboard shortcuts
     useDevMode();
 
-    // Warn (once) when the OAuth app id isn't configured, so a developer running
-    // locally understands why Log in / Sign up are disabled. Skipped inside the
-    // App Builder static preview, which intentionally runs without env vars.
+    // Warn (once) when no OAuth app id is configured, so it's clear why the header
+    // offers "Connect API" instead of Log in / Sign up. Skipped inside the App
+    // Builder static preview, which intentionally runs without env vars.
     useEffect(() => {
         if (isPreviewMode()) return;
-        if (!process.env.NEXT_PUBLIC_DERIV_APP_ID) {
-            botNotification(localize('Waiting for environment variables to be set…'), undefined, { type: 'warning' });
+        if (!isDerivAppIdConfigured()) {
+            botNotification(localize('Add your Deriv app id via "Connect API" to log in and trade.'), undefined, {
+                type: 'warning',
+            });
         }
     }, []);
 

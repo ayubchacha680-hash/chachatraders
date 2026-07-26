@@ -1,0 +1,40 @@
+.api-connection {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    width: min(44rem, calc(100vw - 3.2rem));
+    padding: 2.4rem;
+    border-radius: 0.8rem;
+    background: var(--general-main-1);
+    box-shadow: 0 1.6rem 3.2rem rgb(0 0 0 / 20%);
+
+    &__backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+        display: grid;
+        place-items: center;
+        background: rgb(0 0 0 / 45%);
+    }
+
+    &__field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+
+        input {
+            padding: 0.8rem;
+            border: 1px solid var(--general-section-2);
+            border-radius: 0.4rem;
+            background: var(--general-main-1);
+            color: var(--text-general);
+            font-size: 1.4rem;
+        }
+    }
+
+    &__actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.8rem;
+    }
+}

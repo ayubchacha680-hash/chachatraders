@@ -8,6 +8,7 @@ import {
 } from '@/external/deriv-core';
 import type { AuthConfig } from '@/external/deriv-core';
 import { DerivWSAccountsService } from '@/services/derivws-accounts.service';
+import { getDerivAppId } from '@/utils/deriv-app-id';
 import brandConfig from '../../../../../brand.config.json';
 
 // =============================================================================
@@ -85,6 +86,13 @@ export const getSocketURL = async (): Promise<string> => {
     }
 };
 
+/**
+ * WebSocket URL for Deriv's public market-data gateway. Needs no app id, token or
+ * OTP, so tick streams work before the user logs in. Always the production
+ * gateway — the staging host rejects unauthenticated public connections (403).
+ */
+export const getPublicSocketURL = (): string => WS_SERVERS.PRODUCTION.replace(/^http/, 'ws');
+
 export const getDebugServiceWorker = () => {
     const debug_service_worker_flag = window.localStorage.getItem('debug_service_worker');
     if (debug_service_worker_flag) return !!parseInt(debug_service_worker_flag);
@@ -100,7 +108,7 @@ export const getDebugServiceWorker = () => {
  */
 export const generateOAuthURL = async (prompt?: string): Promise<string> => {
     try {
-        const clientId = process.env.NEXT_PUBLIC_DERIV_APP_ID;
+        const clientId = getDerivAppId();
         if (!clientId) return '';
 
         const config: AuthConfig = {

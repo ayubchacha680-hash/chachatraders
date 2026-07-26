@@ -1,0 +1,178 @@
+.analysis {
+    padding: 1.6rem;
+    overflow-y: auto;
+    height: var(--tab-content-height, calc(100vh - 12rem));
+
+    &__toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 1.6rem;
+        margin-bottom: 0.8rem;
+    }
+
+    &__control {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+
+        select {
+            min-width: 20rem;
+            padding: 0.8rem;
+            border: 1px solid var(--general-section-2);
+            border-radius: 0.4rem;
+            background: var(--general-main-1);
+            color: var(--text-general);
+            font-size: 1.4rem;
+        }
+    }
+
+    &__meta {
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        margin-inline-start: auto;
+    }
+
+    &__status {
+        padding: 0.2rem 0.8rem;
+        border-radius: 1.2rem;
+        font-size: 1.2rem;
+        background: var(--general-section-1);
+        color: var(--text-less-prominent);
+
+        &--open {
+            background: var(--status-success, #4bb4b3);
+            color: var(--core-color-solid-slate-50, #fff);
+        }
+
+        &--reconnecting,
+        &--connecting {
+            background: var(--status-warning, #ffad3a);
+            color: var(--core-color-solid-slate-900, #000);
+        }
+
+        &--closed {
+            background: var(--status-danger, #ec3f3f);
+            color: var(--core-color-solid-slate-50, #fff);
+        }
+    }
+
+    // Only transform/opacity are animated so the highlight stays on the GPU.
+    &__last-digit {
+        display: grid;
+        place-items: center;
+        width: 3.6rem;
+        height: 3.6rem;
+        border-radius: 50%;
+        background: var(--general-section-1);
+        color: var(--text-prominent);
+        font-size: 1.8rem;
+        font-weight: bold;
+        animation: analysis-digit-pop 220ms ease-out;
+        will-change: transform, opacity;
+    }
+
+    &__hint {
+        margin-bottom: 1.2rem;
+    }
+
+    &__error {
+        margin-bottom: 1.2rem;
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(28rem, 1fr));
+        gap: 1.6rem;
+    }
+}
+
+.analysis-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    padding: 1.6rem;
+    border: 1px solid var(--general-section-2);
+    border-radius: 0.8rem;
+    background: var(--general-main-1);
+
+    &--highlight {
+        border-color: var(--brand-secondary, #4bb4b3);
+        box-shadow: 0 0 0 1px var(--brand-secondary, #4bb4b3);
+    }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.8rem;
+    }
+
+    &__badge {
+        padding: 0.2rem 0.8rem;
+        border-radius: 1.2rem;
+        background: var(--brand-secondary, #4bb4b3);
+        color: var(--core-color-solid-slate-50, #fff);
+        font-size: 1.1rem;
+        white-space: nowrap;
+    }
+
+    &__duel {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.8rem;
+    }
+
+    &__bar {
+        display: flex;
+        height: 0.6rem;
+        border-radius: 0.3rem;
+        overflow: hidden;
+        background: var(--general-section-1);
+    }
+
+    &__bar-fill {
+        transition: flex-grow 150ms linear;
+
+        &--even,
+        &--over {
+            background: var(--status-success, #4bb4b3);
+        }
+
+        &--odd,
+        &--under {
+            background: var(--status-info, #377cfc);
+        }
+    }
+
+    &__verdict {
+        margin: 0;
+    }
+}
+
+.analysis-side {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.8rem;
+    border-radius: 0.4rem;
+    background: var(--general-section-1);
+
+    &--leading {
+        background: var(--general-section-5, var(--general-section-1));
+        box-shadow: inset 0 0 0 1px var(--brand-secondary, #4bb4b3);
+    }
+}
+
+@keyframes analysis-digit-pop {
+    from {
+        opacity: 0.4;
+        transform: scale(0.85);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}

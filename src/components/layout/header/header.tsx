@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { observer } from 'mobx-react-lite';
+import { ApiConnectionDialog } from '@/components/api-connection';
 import { generateOAuthURL } from '@/components/shared';
 import Button from '@/components/shared_ui/button';
 import useActiveAccount from '@/hooks/api/account/useActiveAccount';
 import { useApiBase } from '@/hooks/useApiBase';
 import { useLogout } from '@/hooks/useLogout';
 import { useStore } from '@/hooks/useStore';
+import { APP_ID_CHANGE_EVENT, isDerivAppIdConfigured } from '@/utils/deriv-app-id';
 import { navigateToTransfer } from '@/utils/transfer-utils';
 import { Localize } from '@deriv-com/translations';
 import { Header, useDevice, Wrapper } from '@deriv-com/ui';
@@ -38,6 +40,15 @@ const AppHeader = observer(() => {
     });
 
     const handleLogout = useLogout();
+
+    const [is_api_dialog_open, setIsApiDialogOpen] = useState(false);
+    const [is_auth_configured, setIsAuthConfigured] = useState(isDerivAppIdConfigured);
+
+    useEffect(() => {
+        const syncAppId = () => setIsAuthConfigured(isDerivAppIdConfigured());
+        window.addEventListener(APP_ID_CHANGE_EVENT, syncAppId);
+        return () => window.removeEventListener(APP_ID_CHANGE_EVENT, syncAppId);
+    }, []);
 
     // Clear OAuth-pending flag once the account is set (auth succeeded)
     // or after a generous timeout in case something goes wrong.
@@ -169,16 +180,24 @@ const AppHeader = observer(() => {
                 !isOAuthPending &&
                 ((!is_account_regenerating && !isAuthorizing && !activeLoginid) || authTimeout)
             ) {
-                // Disable auth buttons until the OAuth app id is configured, so the
-                // click handlers (which would otherwise log "Failed to generate OAuth
-                // URL") never fire. The env-not-set toast explains why.
-                const isAuthConfigured = Boolean(process.env.NEXT_PUBLIC_DERIV_APP_ID);
+                // Without an app id OAuth cannot start, so offer to connect one
+                // instead of showing dead Log in / Sign up buttons.
+                if (!is_auth_configured) {
+                    return (
+                        <div className='auth-actions'>
+                            <Button primary onClick={() => setIsApiDialogOpen(true)}>
+                                <Localize i18n_default_text='Connect API' />
+                            </Button>
+                        </div>
+                    );
+                }
+
                 return (
                     <div className='auth-actions'>
-                        <Button tertiary disabled={!isAuthConfigured} onClick={handleLogin}>
+                        <Button tertiary onClick={handleLogin}>
                             <Localize i18n_default_text='Log in' />
                         </Button>
-                        <Button primary_light disabled={!isAuthConfigured} onClick={handleSignup}>
+                        <Button primary_light onClick={handleSignup}>
                             <Localize i18n_default_text='Sign up' />
                         </Button>
                     </div>
@@ -224,6 +243,7 @@ const AppHeader = observer(() => {
             handleLogin,
             handleSignup,
             handleTransfer,
+            is_auth_configured,
         ]
     );
 
@@ -242,10 +262,9 @@ const AppHeader = observer(() => {
                     <AppLogo />
                     {isDesktop ? <MenuItems /> : renderAccountSection('left')}
                 </Wrapper>
-                <Wrapper variant='right'>
-                    {renderAccountSection('right')}
-                </Wrapper>
+                <Wrapper variant='right'>{renderAccountSection('right')}</Wrapper>
             </Header>
+            {is_api_dialog_open && <ApiConnectionDialog onClose={() => setIsApiDialogOpen(false)} />}
         </>
     );
 });

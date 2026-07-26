@@ -1,5 +1,12 @@
 import { isProduction } from '@/components/shared';
+import { getDerivAppId } from '@/utils/deriv-app-id';
 import brandConfig from '../../brand.config.json';
+
+/** Every authenticated Deriv REST call must identify the registered app. */
+const getAuthHeaders = (accessToken: string): HeadersInit => ({
+    Authorization: `Bearer ${accessToken}`,
+    'Deriv-App-ID': getDerivAppId(),
+});
 
 /**
  * Account information from derivatives/accounts endpoint
@@ -133,9 +140,7 @@ export class DerivWSAccountsService {
 
                 const response = await fetch(endpoint, {
                     method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
+                    headers: getAuthHeaders(accessToken),
                 });
 
                 if (!response.ok) {
@@ -197,9 +202,7 @@ export class DerivWSAccountsService {
 
                 const response = await fetch(endpoint, {
                     method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
+                    headers: getAuthHeaders(accessToken),
                 });
 
                 if (!response.ok) {
@@ -265,8 +268,7 @@ export class DerivWSAccountsService {
             // localStorage before triggering a WebSocket regeneration, so we honour
             // that selection here instead of always falling back to accounts[0].
             const activeLoginId = localStorage.getItem('active_loginid');
-            const targetAccount =
-                (activeLoginId && accounts.find(a => a.account_id === activeLoginId)) || accounts[0];
+            const targetAccount = (activeLoginId && accounts.find(a => a.account_id === activeLoginId)) || accounts[0];
 
             // Step 4: Fetch OTP and WebSocket URL for the resolved account (always fresh OTP)
             const websocketURL = await this.fetchOTPWebSocketURL(accessToken, targetAccount.account_id);

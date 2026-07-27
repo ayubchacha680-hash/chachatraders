@@ -25,7 +25,7 @@ export const getActiveSymbols = (): Promise<TActiveSymbol[]> => {
             ws?.close();
             fetch_promise = null;
             reject(new Error('Timed out fetching active symbols'));
-        }, 10000);
+        }, 5000);
 
         try {
             ws = new WebSocket(getPublicSocketURL());

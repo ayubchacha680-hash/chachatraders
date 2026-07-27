@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getActiveSymbols, groupSymbolsByMarket, TActiveSymbol } from '@/services/active-symbols';
-import { DEFAULT_ANALYSIS_SYMBOL, ROLLING_WINDOW_SIZE } from '@/constants/analysis';
+import { getActiveSymbols, TActiveSymbol } from '@/services/active-symbols';
+import { DEFAULT_ANALYSIS_SYMBOL, DIGIT_SYMBOLS, ROLLING_WINDOW_SIZE } from '@/constants/analysis';
 import useDigitAnalysis from '@/hooks/useDigitAnalysis';
 import { Localize, localize } from '@deriv-com/translations';
 import EvenOddCard from './even-odd-card';
@@ -106,23 +106,17 @@ const TradingSignal = ({ even_odd, over_under, rise_fall, best_pair, active_tab 
 };
 
 const Analysis = () => {
-    const [symbol, setSymbol]             = useState(DEFAULT_ANALYSIS_SYMBOL);
-    const [symbol_groups, setSymbolGroups] = useState<ReturnType<typeof groupSymbolsByMarket>>({});
-    const [all_symbols, setAllSymbols]     = useState<TActiveSymbol[]>([]);
-    const [active_tab, setActiveTab]       = useState<TContractTab>('digits');
+    const [symbol, setSymbol]         = useState(DEFAULT_ANALYSIS_SYMBOL);
+    const [all_symbols, setAllSymbols] = useState<TActiveSymbol[]>([]);
+    const [active_tab, setActiveTab]  = useState<TContractTab>('digits');
 
     /* No speed_mode exposed — market is analysed at its own natural speed */
     const { snapshot, status, error, ticks_per_second } = useDigitAnalysis(symbol);
     const { even_odd, over_under, best_pair, sample_size, digits, last_digit, last_quote, total_ticks, rise_fall } = snapshot;
 
-    /* load all active symbols once */
+    /* load symbols for pip-size lookup only (market list is hardcoded) */
     useEffect(() => {
-        getActiveSymbols()
-            .then(syms => {
-                setAllSymbols(syms);
-                setSymbolGroups(groupSymbolsByMarket(syms));
-            })
-            .catch(() => {});
+        getActiveSymbols().then(syms => setAllSymbols(syms)).catch(() => {});
     }, []);
 
     const max_pct = Math.max(...digits.map(d => d.percentage), 0.01);
@@ -169,32 +163,9 @@ const Analysis = () => {
                         value={symbol}
                         onChange={e => setSymbol(e.target.value)}
                     >
-                        {Object.keys(symbol_groups).length > 0
-                            ? Object.entries(symbol_groups).map(([key, group]) => (
-                                <optgroup key={key} label={group.display_name}>
-                                    {group.symbols.map(s => (
-                                        <option key={s.symbol} value={s.symbol}>{s.display_name}</option>
-                                    ))}
-                                </optgroup>
-                              ))
-                            : /* fallback while symbols load */
-                              [
-                                  { symbol: 'R_10',    display_name: 'Volatility 10 Index' },
-                                  { symbol: '1HZ10V',  display_name: 'Volatility 10 (1s) Index' },
-                                  { symbol: '1HZ15V',  display_name: 'Volatility 15 (1s) Index' },
-                                  { symbol: 'R_25',    display_name: 'Volatility 25 Index' },
-                                  { symbol: '1HZ25V',  display_name: 'Volatility 25 (1s) Index' },
-                                  { symbol: '1HZ30V',  display_name: 'Volatility 30 (1s) Index' },
-                                  { symbol: 'R_50',    display_name: 'Volatility 50 Index' },
-                                  { symbol: '1HZ50V',  display_name: 'Volatility 50 (1s) Index' },
-                                  { symbol: 'R_75',    display_name: 'Volatility 75 Index' },
-                                  { symbol: '1HZ75V',  display_name: 'Volatility 75 (1s) Index' },
-                                  { symbol: 'R_100',   display_name: 'Volatility 100 Index' },
-                                  { symbol: '1HZ100V', display_name: 'Volatility 100 (1s) Index' },
-                              ].map(s => (
-                                  <option key={s.symbol} value={s.symbol}>{s.display_name}</option>
-                              ))
-                        }
+                        {DIGIT_SYMBOLS.map(s => (
+                            <option key={s.symbol} value={s.symbol}>{s.display_name}</option>
+                        ))}
                     </select>
                 </div>
 
@@ -379,19 +350,6 @@ const Analysis = () => {
                             )}
                         </div>
 
-                        {/* Per-barrier context for Rise/Fall */}
-                        <div className='analysis-v2__rf-barriers'>
-                            <div className='analysis-v2__rf-barriers-title'>Over/Under Context</div>
-                            <div className='analysis-v2__grid'>
-                                {over_under.map(pair => (
-                                    <OverUnderCard
-                                        key={`${pair.over_barrier}-${pair.under_barrier}`}
-                                        stats={pair}
-                                        is_best_overall={best_pair?.over_barrier === pair.over_barrier && (best_pair?.edge ?? 0) > 0}
-                                    />
-                                ))}
-                            </div>
-                        </div>
                     </div>
                 )}
             </div>

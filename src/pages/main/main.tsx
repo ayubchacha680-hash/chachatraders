@@ -52,6 +52,7 @@ const Analysis    = lazy(() => import('../analysis'));
 const FreeBots    = lazy(() => import('../free-bots'));
 const DCircles    = lazy(() => import('../dcircles'));
 
+
 /* ── Ultra-fast Run/Stop floating button ─────────────────────────────────── */
 const RunFab = observer(() => {
     const { run_panel } = useStore();

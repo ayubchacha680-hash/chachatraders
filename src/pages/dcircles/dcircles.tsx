@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { groupSymbolsByMarket, getActiveSymbols, TActiveSymbol } from '@/services/active-symbols';
+import { DIGIT_SYMBOLS } from '@/constants/analysis';
 import { getPublicTickSocket } from '@/services/analysis/public-tick-socket';
 import { RollingDigitWindow, getLastDigit, TDigitStats } from '@/services/analysis/digit-analysis';
 import './dcircles.scss';
@@ -8,8 +8,8 @@ const WINDOW_SIZE = 1000;
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 /* ── Slot dimensions — kept in TS so the triangle x-pos stays in sync ─── */
-const SLOT_W  = 132;   // px – total width of each digit slot
-const CIRCLE_SIZE = 110; // px – diameter of each circle
+const SLOT_W  = 90;   // px – total width of each digit slot
+const CIRCLE_SIZE = 76; // px – diameter of each circle
 
 /* ── Color assignment ──────────────────────────────────────────────────── */
 function assignColors(digits: TDigitStats[]): Record<number, string> {
@@ -34,8 +34,6 @@ function assignColors(digits: TDigitStats[]): Record<number, string> {
 /* ── Main component ─────────────────────────────────────────────────────── */
 const DCircles = () => {
     const [symbol, setSymbol]         = useState('R_100');
-    const [symbol_groups, setSymbolGroups] = useState<ReturnType<typeof groupSymbolsByMarket>>({});
-    const [all_symbols, setAllSymbols] = useState<TActiveSymbol[]>([]);
     const [digits, setDigits]         = useState<TDigitStats[]>(DIGITS.map(d => ({ digit: d, count: 0, percentage: 0 })));
     const [current_digit, setCurrentDigit] = useState<number | null>(null);
     const [current_price, setCurrentPrice] = useState<number | null>(null);
@@ -46,16 +44,6 @@ const DCircles = () => {
 
     const window_ref = useRef(new RollingDigitWindow(WINDOW_SIZE));
     const frame_ref  = useRef<number | null>(null);
-
-    /* load symbol list once */
-    useEffect(() => {
-        getActiveSymbols()
-            .then(syms => {
-                setAllSymbols(syms);
-                setSymbolGroups(groupSymbolsByMarket(syms));
-            })
-            .catch(() => {});
-    }, []);
 
     /* subscribe to tick stream */
     useEffect(() => {
@@ -132,27 +120,9 @@ const DCircles = () => {
                         value={symbol}
                         onChange={e => setSymbol(e.target.value)}
                     >
-                        {Object.entries(symbol_groups).map(([market_key, group]) => (
-                            <optgroup key={market_key} label={group.display_name}>
-                                {group.symbols.map(s => (
-                                    <option key={s.symbol} value={s.symbol}>{s.display_name}</option>
-                                ))}
-                            </optgroup>
+                        {DIGIT_SYMBOLS.map(s => (
+                            <option key={s.symbol} value={s.symbol}>{s.display_name}</option>
                         ))}
-                        {all_symbols.length === 0 && (
-                            <>
-                                <option value='R_10'>Volatility 10 Index</option>
-                                <option value='1HZ10V'>Volatility 10 (1s) Index</option>
-                                <option value='R_25'>Volatility 25 Index</option>
-                                <option value='1HZ25V'>Volatility 25 (1s) Index</option>
-                                <option value='R_50'>Volatility 50 Index</option>
-                                <option value='1HZ50V'>Volatility 50 (1s) Index</option>
-                                <option value='R_75'>Volatility 75 Index</option>
-                                <option value='1HZ75V'>Volatility 75 (1s) Index</option>
-                                <option value='R_100'>Volatility 100 Index</option>
-                                <option value='1HZ100V'>Volatility 100 (1s) Index</option>
-                            </>
-                        )}
                     </select>
                 </div>
 
@@ -234,46 +204,6 @@ const DCircles = () => {
                 </div>
             </div>
 
-            {/* ── stats table ── */}
-            <div className='dcircles__table-wrap'>
-                <table className='dcircles__table'>
-                    <thead>
-                        <tr>
-                            <th>Digit</th>
-                            <th>Count</th>
-                            <th>Frequency</th>
-                            <th>Bar</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {[...digits].sort((a, b) => b.percentage - a.percentage).map(({ digit, count, percentage }) => {
-                            const color = colors[digit] ?? '#bdbdbd';
-                            return (
-                                <tr key={digit} className={current_digit === digit ? 'dcircles__table-row--active' : ''}>
-                                    <td>
-                                        <span className='dcircles__table-badge' style={{ background: color, color: color === '#bdbdbd' ? '#333' : '#fff' }}>
-                                            {digit}
-                                        </span>
-                                    </td>
-                                    <td>{count.toLocaleString()}</td>
-                                    <td>
-                                        <strong>{percentage.toFixed(2)}%</strong>
-                                        {percentage > 10 && <span className='dcircles__table-tick'>✓</span>}
-                                    </td>
-                                    <td className='dcircles__bar-cell'>
-                                        <div className='dcircles__bar-bg'>
-                                            <div
-                                                className='dcircles__bar-fill'
-                                                style={{ width: `${Math.min(percentage * 5, 100)}%`, background: color === '#bdbdbd' ? '#ccc' : color }}
-                                            />
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </div>
         </div>
     );
 };

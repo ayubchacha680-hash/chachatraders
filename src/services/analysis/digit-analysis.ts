@@ -5,9 +5,7 @@ export type TEvenOddStats = {
     odd_count: number;
     even_percentage: number;
     odd_percentage: number;
-    /** The side with the higher share of the window, or null when they are level. */
     bias: 'even' | 'odd' | null;
-    /** Percentage-point gap between the two sides. */
     bias_edge: number;
 };
 
@@ -16,9 +14,7 @@ export type TOverUnderStats = TOverUnderPair & {
     under_count: number;
     over_percentage: number;
     under_percentage: number;
-    /** The side of this pair with the higher share of the window, or null when level. */
     best_side: 'over' | 'under' | null;
-    /** Percentage-point gap between the two sides of this pair. */
     edge: number;
 };
 
@@ -28,35 +24,36 @@ export type TDigitStats = {
     percentage: number;
 };
 
+/** Rise/Fall stats computed from actual tick-by-tick price direction */
+export type TRiseFallStats = {
+    rise_count: number;
+    fall_count: number;
+    flat_count: number;
+    rise_percentage: number;
+    fall_percentage: number;
+    bias: 'rise' | 'fall' | null;
+    bias_edge: number;
+};
+
 export type TAnalysisSnapshot = {
-    /** Ticks currently held in the rolling window (capped at ROLLING_WINDOW_SIZE). */
     sample_size: number;
-    /** Total ticks ingested since the window was created, including evicted ones. */
     total_ticks: number;
     last_digit: number | null;
     last_quote: number | null;
     digits: TDigitStats[];
     even_odd: TEvenOddStats;
     over_under: TOverUnderStats[];
-    /** Pair with the largest edge across all pairs — the strongest single-market read. */
     best_pair: TOverUnderStats | null;
+    rise_fall: TRiseFallStats;
 };
 
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 export const toPercentage = (count: number, total: number) => (total > 0 ? (count / total) * 100 : 0);
 
-/**
- * Last decimal digit of a quote, respecting the symbol's pip size — `12.3` on a
- * 2-decimal symbol is digit 0, not 3.
- */
 export const getLastDigit = (quote: number, pip_size: number): number =>
     Number(Number(quote).toFixed(pip_size).slice(-1));
 
-/**
- * Fixed-capacity ring buffer of last digits with per-digit counters, so every
- * push and every stats read is O(1) regardless of window size.
- */
 export class RollingDigitWindow {
     private readonly buffer: Int8Array;
     private readonly counts = new Array<number>(10).fill(0);
@@ -66,40 +63,62 @@ export class RollingDigitWindow {
     private last_digit: number | null = null;
     private last_quote: number | null = null;
 
+    /* Rise/Fall tracking: ring buffer of movements (+1=rise, -1=fall, 0=flat) */
+    private readonly rf_buffer: Int8Array;
+    private rf_write = 0;
+    private rf_filled = 0;
+    private rf_rise = 0;
+    private rf_fall = 0;
+    private rf_flat = 0;
+    private prev_quote: number | null = null;
+
     constructor(readonly capacity: number = ROLLING_WINDOW_SIZE) {
-        this.buffer = new Int8Array(capacity);
+        this.buffer    = new Int8Array(capacity);
+        this.rf_buffer = new Int8Array(capacity);
     }
 
-    get size() {
-        return this.filled;
-    }
-
-    get total_ticks() {
-        return this.ingested;
-    }
-
-    get is_full() {
-        return this.filled === this.capacity;
-    }
+    get size()         { return this.filled; }
+    get total_ticks()  { return this.ingested; }
+    get is_full()      { return this.filled === this.capacity; }
 
     push(digit: number, quote: number | null = null) {
         if (!Number.isInteger(digit) || digit < 0 || digit > 9) return;
 
+        // ── digit window ──────────────────────────────────────────────────
         if (this.filled === this.capacity) {
             this.counts[this.buffer[this.write_index]] -= 1;
         } else {
             this.filled += 1;
         }
-
         this.buffer[this.write_index] = digit;
         this.counts[digit] += 1;
         this.write_index = (this.write_index + 1) % this.capacity;
         this.ingested += 1;
         this.last_digit = digit;
         this.last_quote = quote;
+
+        // ── rise/fall window ──────────────────────────────────────────────
+        if (quote !== null && this.prev_quote !== null) {
+            const mv: -1 | 0 | 1 = quote > this.prev_quote ? 1 : quote < this.prev_quote ? -1 : 0;
+
+            if (this.rf_filled === this.capacity) {
+                const evicted = this.rf_buffer[this.rf_write];
+                if (evicted === 1)  this.rf_rise -= 1;
+                else if (evicted === -1) this.rf_fall -= 1;
+                else                this.rf_flat -= 1;
+            } else {
+                this.rf_filled += 1;
+            }
+
+            this.rf_buffer[this.rf_write] = mv;
+            if (mv === 1)  this.rf_rise += 1;
+            else if (mv === -1) this.rf_fall += 1;
+            else                this.rf_flat += 1;
+            this.rf_write = (this.rf_write + 1) % this.capacity;
+        }
+        if (quote !== null) this.prev_quote = quote;
     }
 
-    /** Seeds the window from a history batch, keeping only the newest `capacity` digits. */
     seed(digits: number[], quotes: number[] = []) {
         this.reset();
         const start = Math.max(0, digits.length - this.capacity);
@@ -110,17 +129,22 @@ export class RollingDigitWindow {
 
     reset() {
         this.buffer.fill(0);
+        this.rf_buffer.fill(0);
         this.counts.fill(0);
         this.write_index = 0;
-        this.filled = 0;
-        this.ingested = 0;
-        this.last_digit = null;
-        this.last_quote = null;
+        this.filled      = 0;
+        this.ingested    = 0;
+        this.last_digit  = null;
+        this.last_quote  = null;
+        this.rf_write    = 0;
+        this.rf_filled   = 0;
+        this.rf_rise     = 0;
+        this.rf_fall     = 0;
+        this.rf_flat     = 0;
+        this.prev_quote  = null;
     }
 
-    getCount(digit: number) {
-        return this.counts[digit] ?? 0;
-    }
+    getCount(digit: number) { return this.counts[digit] ?? 0; }
 
     snapshot(): TAnalysisSnapshot {
         const total = this.filled;
@@ -142,6 +166,22 @@ export class RollingDigitWindow {
             even_odd: this.evenOddStats(total),
             over_under,
             best_pair: pickBestPair(over_under),
+            rise_fall: this.riseFallStats(),
+        };
+    }
+
+    private riseFallStats(): TRiseFallStats {
+        const total = this.rf_rise + this.rf_fall + this.rf_flat;
+        const rise_percentage = toPercentage(this.rf_rise, total);
+        const fall_percentage = toPercentage(this.rf_fall, total);
+        return {
+            rise_count: this.rf_rise,
+            fall_count: this.rf_fall,
+            flat_count: this.rf_flat,
+            rise_percentage,
+            fall_percentage,
+            bias: this.rf_rise === this.rf_fall ? null : this.rf_rise > this.rf_fall ? 'rise' : 'fall',
+            bias_edge: Math.abs(rise_percentage - fall_percentage),
         };
     }
 
@@ -152,13 +192,9 @@ export class RollingDigitWindow {
         }
         const odd_count = total - even_count;
         const even_percentage = toPercentage(even_count, total);
-        const odd_percentage = toPercentage(odd_count, total);
-
+        const odd_percentage  = toPercentage(odd_count, total);
         return {
-            even_count,
-            odd_count,
-            even_percentage,
-            odd_percentage,
+            even_count, odd_count, even_percentage, odd_percentage,
             bias: even_count === odd_count ? null : even_count > odd_count ? 'even' : 'odd',
             bias_edge: Math.abs(even_percentage - odd_percentage),
         };
@@ -171,22 +207,16 @@ export class RollingDigitWindow {
             if (digit > pair.over_barrier) over_count += this.counts[digit];
             if (digit < pair.under_barrier) under_count += this.counts[digit];
         }
-        const over_percentage = toPercentage(over_count, total);
+        const over_percentage  = toPercentage(over_count, total);
         const under_percentage = toPercentage(under_count, total);
-
         return {
-            ...pair,
-            over_count,
-            under_count,
-            over_percentage,
-            under_percentage,
+            ...pair, over_count, under_count, over_percentage, under_percentage,
             best_side: over_count === under_count ? null : over_count > under_count ? 'over' : 'under',
             edge: Math.abs(over_percentage - under_percentage),
         };
     }
 }
 
-/** Highest-edge pair; ties resolve to the lower barrier (the wider, safer contract). */
 export const pickBestPair = (pairs: TOverUnderStats[]): TOverUnderStats | null =>
     pairs.reduce<TOverUnderStats | null>((best, pair) => (best && best.edge >= pair.edge ? best : pair), null);
 

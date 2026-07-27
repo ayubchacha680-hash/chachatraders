@@ -79,7 +79,7 @@
         "css_variable_prefix": "--brand"
     },
     "platform": {
-        "name": "Deriv Trading Bot",
+        "name": "CCTraders",
         "footer": {
             "enable_language_settings": false,
             "enable_theme_toggle": true

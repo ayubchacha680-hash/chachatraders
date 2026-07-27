@@ -1,12 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getActiveSymbols, groupSymbolsByMarket, TActiveSymbol } from '@/services/active-symbols';
-import {
-    DEFAULT_ANALYSIS_SYMBOL,
-    ROLLING_WINDOW_SIZE,
-    SPEED_MODE_CONFIG,
-    SPEED_MODES,
-    TSpeedMode,
-} from '@/constants/analysis';
+import { DEFAULT_ANALYSIS_SYMBOL, ROLLING_WINDOW_SIZE } from '@/constants/analysis';
 import useDigitAnalysis from '@/hooks/useDigitAnalysis';
 import { Localize, localize } from '@deriv-com/translations';
 import EvenOddCard from './even-odd-card';
@@ -27,16 +21,101 @@ const CONTRACT_TABS: { id: TContractTab; label: string; emoji: string }[] = [
     { id: 'rise_fall',  label: 'Rise / Fall',   emoji: '📈' },
 ];
 
+/* ── Bias pill helper ──────────────────────────────────────────────────────── */
+const BiasPill = ({
+    label, color, edge, recommendation,
+}: {
+    label: string;
+    color: string;
+    edge: number;
+    recommendation: string;
+}) => (
+    <div className='analysis-v2__bias-result' style={{ borderColor: color }}>
+        <div className='analysis-v2__bias-arrow' style={{ background: color }}>
+            {label === 'RISE' || label === 'EVEN' || label === 'OVER' ? '↑' : '↓'}
+        </div>
+        <div className='analysis-v2__bias-body'>
+            <span className='analysis-v2__bias-label' style={{ color }}>{label}</span>
+            <span className='analysis-v2__bias-edge'>edge: {edge.toFixed(2)}%</span>
+        </div>
+        <div className='analysis-v2__bias-rec'>{recommendation}</div>
+    </div>
+);
+
+const NoBias = () => (
+    <div className='analysis-v2__no-bias'>⚖️ No significant bias — market is balanced</div>
+);
+
+/* ── Overall trading signal card ───────────────────────────────────────────── */
+const TradingSignal = ({ even_odd, over_under, rise_fall, best_pair, active_tab }: {
+    even_odd: any;
+    over_under: any[];
+    rise_fall: any;
+    best_pair: any;
+    active_tab: TContractTab;
+}) => {
+    const signals: { tab: TContractTab; label: string; bias: string | null; edge: number; color: string; good: string }[] = [
+        {
+            tab: 'even_odd',
+            label: 'Even/Odd',
+            bias: even_odd.bias ? even_odd.bias.toUpperCase() : null,
+            edge: even_odd.bias_edge,
+            color: even_odd.bias === 'even' ? '#16c784' : '#2196f3',
+            good: even_odd.bias === 'even' ? 'Trade EVEN digits' : even_odd.bias === 'odd' ? 'Trade ODD digits' : '',
+        },
+        {
+            tab: 'over_under',
+            label: 'Over/Under',
+            bias: best_pair?.best_side ? `${best_pair.best_side.toUpperCase()} ${best_pair.best_side === 'over' ? best_pair.over_barrier : best_pair.under_barrier}` : null,
+            edge: best_pair?.edge ?? 0,
+            color: best_pair?.best_side === 'over' ? '#16c784' : '#e53935',
+            good: best_pair?.best_side ? `Trade ${best_pair.best_side.toUpperCase()} ${best_pair.best_side === 'over' ? best_pair.over_barrier : best_pair.under_barrier}` : '',
+        },
+        {
+            tab: 'rise_fall',
+            label: 'Rise/Fall',
+            bias: rise_fall.bias ? rise_fall.bias.toUpperCase() : null,
+            edge: rise_fall.bias_edge,
+            color: rise_fall.bias === 'rise' ? '#16c784' : '#e53935',
+            good: rise_fall.bias === 'rise' ? 'Trade RISE contracts' : rise_fall.bias === 'fall' ? 'Trade FALL contracts' : '',
+        },
+    ];
+
+    const filtered = signals.filter(s => s.tab === active_tab || active_tab === 'digits');
+    const show = active_tab === 'digits' ? signals : signals.filter(s => s.tab === active_tab);
+
+    return (
+        <div className='analysis-v2__signal-card'>
+            <div className='analysis-v2__signal-title'>🎯 Trading Signals</div>
+            {show.map(s => (
+                <div key={s.tab} className='analysis-v2__signal-row'>
+                    <span className='analysis-v2__signal-type'>{s.label}</span>
+                    {s.bias ? (
+                        <>
+                            <span className='analysis-v2__signal-bias' style={{ color: s.color }}>{s.bias}</span>
+                            <span className='analysis-v2__signal-edge'>{s.edge.toFixed(2)}% edge</span>
+                            <span className='analysis-v2__signal-rec' style={{ color: s.color }}>✓ {s.good}</span>
+                        </>
+                    ) : (
+                        <span className='analysis-v2__signal-neutral'>Balanced — no clear edge</span>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+};
+
 const Analysis = () => {
     const [symbol, setSymbol]             = useState(DEFAULT_ANALYSIS_SYMBOL);
     const [symbol_groups, setSymbolGroups] = useState<ReturnType<typeof groupSymbolsByMarket>>({});
     const [all_symbols, setAllSymbols]     = useState<TActiveSymbol[]>([]);
     const [active_tab, setActiveTab]       = useState<TContractTab>('digits');
 
-    const { snapshot, status, error, speed_mode, setSpeedMode, ticks_per_second } = useDigitAnalysis(symbol);
-    const { even_odd, over_under, best_pair, sample_size, digits, last_digit, total_ticks } = snapshot;
+    /* No speed_mode exposed — market is analysed at its own natural speed */
+    const { snapshot, status, error, ticks_per_second } = useDigitAnalysis(symbol);
+    const { even_odd, over_under, best_pair, sample_size, digits, last_digit, last_quote, total_ticks, rise_fall } = snapshot;
 
-    /* load all active symbols for the dropdown */
+    /* load all active symbols once */
     useEffect(() => {
         getActiveSymbols()
             .then(syms => {
@@ -46,13 +125,12 @@ const Analysis = () => {
             .catch(() => {});
     }, []);
 
-    /* ── Digit frequency bar display ── */
     const max_pct = Math.max(...digits.map(d => d.percentage), 0.01);
 
-    /* ── Rise/Fall proxy: count of price increases vs decreases ── */
-    const above_five = over_under.find(p => p.over_barrier === 4);
-    const rise_pct = above_five ? above_five.over_percentage : 50;
-    const fall_pct = above_five ? above_five.under_percentage : 50;
+    /* current market price formatted */
+    const price_str = last_quote !== null ? last_quote.toFixed(
+        all_symbols.find(s => s.symbol === symbol)?.pip ?? 2
+    ) : '—';
 
     return (
         <div className='analysis-v2'>
@@ -61,25 +139,27 @@ const Analysis = () => {
                 <div className='analysis-v2__banner-content'>
                     <div>
                         <h2 className='analysis-v2__banner-title'>Market Analysis</h2>
-                        <p className='analysis-v2__banner-subtitle'>Real-time digit &amp; contract statistics from Deriv</p>
+                        <p className='analysis-v2__banner-subtitle'>Real-time tick statistics · {ROLLING_WINDOW_SIZE.toLocaleString()} tick window</p>
                     </div>
                     <div className='analysis-v2__banner-meta'>
                         <span className={`analysis-v2__status analysis-v2__status--${status}`}>
                             {localize(STATUS_LABEL[status] ?? status)}
                         </span>
-                        <span className='analysis-v2__rate'>
-                            {ticks_per_second.toFixed(1)} ticks/s
+                        <span className='analysis-v2__rate'>{ticks_per_second.toFixed(1)} ticks/s</span>
+                        <span className='analysis-v2__price-badge' title='Current price'>
+                            <span className='analysis-v2__price-label'>Price</span>
+                            <span className='analysis-v2__price-val'>{price_str}</span>
                         </span>
-                        <span className='analysis-v2__last-digit' key={total_ticks}>
-                            {last_digit ?? '–'}
+                        <span className='analysis-v2__last-digit-badge' title='Last digit' key={total_ticks}>
+                            <span className='analysis-v2__ld-label'>Last</span>
+                            <span className='analysis-v2__ld-val'>{last_digit ?? '–'}</span>
                         </span>
                     </div>
                 </div>
             </div>
 
-            {/* ── Controls ── */}
+            {/* ── Controls — market only, no speed selector ── */}
             <div className='analysis-v2__controls'>
-                {/* Market dropdown — full active_symbols list */}
                 <div className='analysis-v2__control'>
                     <label className='analysis-v2__control-label'>
                         <Localize i18n_default_text='Market' />
@@ -118,31 +198,33 @@ const Analysis = () => {
                     </select>
                 </div>
 
-                {/* Speed mode */}
-                <div className='analysis-v2__control'>
-                    <label className='analysis-v2__control-label'>
-                        <Localize i18n_default_text='Speed' />
-                    </label>
-                    <select
-                        className='analysis-v2__select'
-                        value={speed_mode}
-                        onChange={e => setSpeedMode(e.target.value as TSpeedMode)}
-                    >
-                        {SPEED_MODES.map(mode => (
-                            <option key={mode} value={mode}>{SPEED_MODE_CONFIG[mode].label}</option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className='analysis-v2__window-info'>
-                    <span className='analysis-v2__window-label'>Window</span>
-                    <span className='analysis-v2__window-val'>{sample_size.toLocaleString()}</span>
-                    <span className='analysis-v2__window-sep'>/</span>
-                    <span className='analysis-v2__window-total'>{ROLLING_WINDOW_SIZE.toLocaleString()}</span>
+                {/* Live price + last digit inline info */}
+                <div className='analysis-v2__live-info'>
+                    <div className='analysis-v2__live-box'>
+                        <span className='analysis-v2__live-box-label'>Current Price</span>
+                        <span className='analysis-v2__live-box-val analysis-v2__live-box-val--price'>{price_str}</span>
+                    </div>
+                    <div className='analysis-v2__live-box'>
+                        <span className='analysis-v2__live-box-label'>Last Digit</span>
+                        <span className='analysis-v2__live-box-val analysis-v2__live-box-val--digit' key={total_ticks}>{last_digit ?? '–'}</span>
+                    </div>
+                    <div className='analysis-v2__live-box'>
+                        <span className='analysis-v2__live-box-label'>Window</span>
+                        <span className='analysis-v2__live-box-val'>{sample_size.toLocaleString()} / {ROLLING_WINDOW_SIZE.toLocaleString()}</span>
+                    </div>
                 </div>
             </div>
 
             {error && <div className='analysis-v2__error'>⚠️ {error}</div>}
+
+            {/* ── Trading signal panel (always visible) ── */}
+            <TradingSignal
+                even_odd={even_odd}
+                over_under={over_under}
+                rise_fall={rise_fall}
+                best_pair={best_pair}
+                active_tab={active_tab}
+            />
 
             {/* ── Contract type tabs ── */}
             <div className='analysis-v2__tabs'>
@@ -197,13 +279,17 @@ const Analysis = () => {
                     <div className='analysis-v2__grid'>
                         <EvenOddCard stats={even_odd} sample_size={sample_size} />
                         <div className='analysis-v2__info-card'>
-                            <h3>How Even/Odd works</h3>
-                            <p>Predicts whether the last digit of the close price is even (0, 2, 4, 6, 8) or odd (1, 3, 5, 7, 9). Theoretically 50/50 — any sustained bias is exploitable.</p>
-                            <div className='analysis-v2__bias-pill' style={{ background: even_odd.bias === 'even' ? '#16c78422' : even_odd.bias === 'odd' ? '#2196f322' : '#88888822' }}>
-                                {even_odd.bias
-                                    ? `Current bias: ${even_odd.bias.toUpperCase()} by ${even_odd.bias_edge.toFixed(2)} pts`
-                                    : 'No bias — perfectly balanced'}
-                            </div>
+                            <h3>Even / Odd Bias</h3>
+                            <p>Tracks whether the last digit of the close price is even (0, 2, 4, 6, 8) or odd (1, 3, 5, 7, 9). Theoretically 50/50 — any sustained bias indicates edge.</p>
+                            {even_odd.bias
+                                ? <BiasPill
+                                    label={even_odd.bias.toUpperCase()}
+                                    color={even_odd.bias === 'even' ? '#16c784' : '#2196f3'}
+                                    edge={even_odd.bias_edge}
+                                    recommendation={`Trade ${even_odd.bias.toUpperCase()} digits · ${(even_odd.bias === 'even' ? even_odd.even_percentage : even_odd.odd_percentage).toFixed(2)}% frequency`}
+                                  />
+                                : <NoBias />
+                            }
                         </div>
                     </div>
                 )}
@@ -221,51 +307,91 @@ const Analysis = () => {
                     </div>
                 )}
 
-                {/* RISE / FALL proxy */}
+                {/* RISE / FALL — actual price direction */}
                 {active_tab === 'rise_fall' && (
-                    <div className='analysis-v2__grid'>
+                    <div className='analysis-v2__rf-wrap'>
+                        {/* Main rise/fall card */}
                         <div className='analysis-v2__rf-card'>
                             <div className='analysis-v2__rf-header'>
-                                <h3>📈 Rise / Fall Statistics</h3>
-                                <span className='analysis-v2__rf-subtitle'>Based on digit distribution over {ROLLING_WINDOW_SIZE.toLocaleString()} ticks</span>
+                                <h3>📈 Rise / Fall Analysis</h3>
+                                <span className='analysis-v2__rf-subtitle'>
+                                    Based on actual tick-by-tick price direction · {(rise_fall.rise_count + rise_fall.fall_count + rise_fall.flat_count).toLocaleString()} movements
+                                </span>
                             </div>
+
+                            {/* Rise vs Fall bars */}
                             <div className='analysis-v2__rf-row'>
-                                <div className='analysis-v2__rf-side analysis-v2__rf-side--rise'>
+                                <div className={`analysis-v2__rf-side analysis-v2__rf-side--rise ${rise_fall.bias === 'rise' ? 'analysis-v2__rf-side--winning' : ''}`}>
                                     <span className='analysis-v2__rf-icon'>↑</span>
-                                    <span className='analysis-v2__rf-label'>Rise (Over 4)</span>
-                                    <span className='analysis-v2__rf-val'>{rise_pct.toFixed(2)}%</span>
-                                    <span className='analysis-v2__rf-count'>
-                                        {(above_five?.over_count ?? 0).toLocaleString()} ticks
-                                    </span>
+                                    <span className='analysis-v2__rf-label'>Rise</span>
+                                    <span className='analysis-v2__rf-val'>{rise_fall.rise_percentage.toFixed(2)}%</span>
+                                    <span className='analysis-v2__rf-count'>{rise_fall.rise_count.toLocaleString()} ticks</span>
                                 </div>
                                 <div className='analysis-v2__rf-divider' />
-                                <div className='analysis-v2__rf-side analysis-v2__rf-side--fall'>
+                                <div className={`analysis-v2__rf-side analysis-v2__rf-side--fall ${rise_fall.bias === 'fall' ? 'analysis-v2__rf-side--winning' : ''}`}>
                                     <span className='analysis-v2__rf-icon'>↓</span>
-                                    <span className='analysis-v2__rf-label'>Fall (Under 5)</span>
-                                    <span className='analysis-v2__rf-val'>{fall_pct.toFixed(2)}%</span>
-                                    <span className='analysis-v2__rf-count'>
-                                        {(above_five?.under_count ?? 0).toLocaleString()} ticks
-                                    </span>
+                                    <span className='analysis-v2__rf-label'>Fall</span>
+                                    <span className='analysis-v2__rf-val'>{rise_fall.fall_percentage.toFixed(2)}%</span>
+                                    <span className='analysis-v2__rf-count'>{rise_fall.fall_count.toLocaleString()} ticks</span>
                                 </div>
                             </div>
+
+                            {/* Visual bar */}
                             <div className='analysis-v2__rf-bar'>
-                                <div className='analysis-v2__rf-bar-fill rise' style={{ flexGrow: rise_pct }} />
-                                <div className='analysis-v2__rf-bar-fill fall' style={{ flexGrow: fall_pct }} />
+                                <div
+                                    className='analysis-v2__rf-bar-fill rise'
+                                    style={{ flexGrow: rise_fall.rise_percentage || 0.1 }}
+                                />
+                                <div
+                                    className='analysis-v2__rf-bar-fill fall'
+                                    style={{ flexGrow: rise_fall.fall_percentage || 0.1 }}
+                                />
                             </div>
-                            <p className='analysis-v2__rf-note'>
-                                ℹ️ Rise/Fall is based on over/under barrier 4/5 as a proxy for upward vs downward price movement in the digit stream.
-                                For actual Rise/Fall contracts, the full tick-by-tick price direction determines the outcome.
-                            </p>
+
+                            {/* Flat indicator */}
+                            {rise_fall.flat_count > 0 && (
+                                <div className='analysis-v2__rf-flat'>
+                                    Flat ticks (no change): {rise_fall.flat_count.toLocaleString()}
+                                </div>
+                            )}
                         </div>
 
-                        {/* Extra over/under pairs for context */}
-                        {over_under.slice(0, 2).map(pair => (
-                            <OverUnderCard
-                                key={`${pair.over_barrier}-${pair.under_barrier}`}
-                                stats={pair}
-                                is_best_overall={best_pair?.over_barrier === pair.over_barrier && (best_pair?.edge ?? 0) > 0}
-                            />
-                        ))}
+                        {/* Bias verdict */}
+                        <div className='analysis-v2__rf-verdict'>
+                            <div className='analysis-v2__rf-verdict-title'>Trading Recommendation</div>
+                            {rise_fall.bias ? (
+                                <div className={`analysis-v2__rf-verdict-body analysis-v2__rf-verdict-body--${rise_fall.bias}`}>
+                                    <div className='analysis-v2__rf-verdict-icon'>
+                                        {rise_fall.bias === 'rise' ? '📈' : '📉'}
+                                    </div>
+                                    <div className='analysis-v2__rf-verdict-text'>
+                                        <strong>Trade {rise_fall.bias.toUpperCase()}</strong>
+                                        <span>{rise_fall.bias_edge.toFixed(2)}% edge over {rise_fall.bias === 'rise' ? 'FALL' : 'RISE'}</span>
+                                        <span className='analysis-v2__rf-verdict-pct'>
+                                            {rise_fall.bias === 'rise' ? rise_fall.rise_percentage.toFixed(2) : rise_fall.fall_percentage.toFixed(2)}% of ticks moved {rise_fall.bias}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className='analysis-v2__rf-verdict-neutral'>
+                                    ⚖️ Market is balanced — Rise and Fall are equally likely right now. Avoid trading until a bias develops.
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Per-barrier context for Rise/Fall */}
+                        <div className='analysis-v2__rf-barriers'>
+                            <div className='analysis-v2__rf-barriers-title'>Over/Under Context</div>
+                            <div className='analysis-v2__grid'>
+                                {over_under.map(pair => (
+                                    <OverUnderCard
+                                        key={`${pair.over_barrier}-${pair.under_barrier}`}
+                                        stats={pair}
+                                        is_best_overall={best_pair?.over_barrier === pair.over_barrier && (best_pair?.edge ?? 0) > 0}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

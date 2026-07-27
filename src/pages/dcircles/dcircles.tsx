@@ -7,42 +7,45 @@ import './dcircles.scss';
 const WINDOW_SIZE = 1000;
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-/* ── Color assignment ─────────────────────────────────────────────────────── */
-function assignColors(digits: TDigitStats[]): Record<number, string> {
-    // Round to 2dp so truly equal percentages get the same colour
-    const rounded = digits.map(d => ({ digit: d.digit, pct: Math.round(d.percentage * 100) / 100 }));
-    const unique_pcts = [...new Set(rounded.map(d => d.pct))].sort((a, b) => b - a);
-    const n = unique_pcts.length;
+/* ── Slot dimensions — kept in TS so the triangle x-pos stays in sync ─── */
+const SLOT_W  = 132;   // px – total width of each digit slot
+const CIRCLE_SIZE = 110; // px – diameter of each circle
 
-    const rank_of = new Map<number, number>();
+/* ── Color assignment ──────────────────────────────────────────────────── */
+function assignColors(digits: TDigitStats[]): Record<number, string> {
+    const rounded    = digits.map(d => ({ digit: d.digit, pct: Math.round(d.percentage * 100) / 100 }));
+    const unique_pcts = [...new Set(rounded.map(d => d.pct))].sort((a, b) => b - a);
+    const n          = unique_pcts.length;
+    const rank_of    = new Map<number, number>();
     unique_pcts.forEach((pct, i) => rank_of.set(pct, i));
 
     const colors: Record<number, string> = {};
     for (const { digit, pct } of rounded) {
         const rank = rank_of.get(pct) ?? 0;
-        if (rank === 0) colors[digit] = '#16c784';        // green  – highest
-        else if (rank === 1) colors[digit] = '#2196f3';   // blue   – 2nd highest
-        else if (rank === n - 1) colors[digit] = '#e53935'; // red  – lowest
-        else if (rank === n - 2) colors[digit] = '#ffb300'; // yellow – 2nd lowest
-        else colors[digit] = '#ffffff';                     // white  – normal
+        if      (rank === 0)     colors[digit] = '#16c784';  // green   – highest
+        else if (rank === 1)     colors[digit] = '#2196f3';  // blue    – 2nd highest
+        else if (rank === n - 1) colors[digit] = '#e53935';  // red     – lowest
+        else if (rank === n - 2) colors[digit] = '#ffb300';  // yellow  – 2nd lowest
+        else                     colors[digit] = '#bdbdbd';  // white/grey – normal
     }
     return colors;
 }
 
-/* ── Main component ───────────────────────────────────────────────────────── */
+/* ── Main component ─────────────────────────────────────────────────────── */
 const DCircles = () => {
-    const [symbol, setSymbol] = useState('R_100');
+    const [symbol, setSymbol]         = useState('R_100');
     const [symbol_groups, setSymbolGroups] = useState<ReturnType<typeof groupSymbolsByMarket>>({});
     const [all_symbols, setAllSymbols] = useState<TActiveSymbol[]>([]);
-    const [digits, setDigits] = useState<TDigitStats[]>(DIGITS.map(d => ({ digit: d, count: 0, percentage: 0 })));
+    const [digits, setDigits]         = useState<TDigitStats[]>(DIGITS.map(d => ({ digit: d, count: 0, percentage: 0 })));
     const [current_digit, setCurrentDigit] = useState<number | null>(null);
+    const [current_price, setCurrentPrice] = useState<number | null>(null);
     const [sample_size, setSampleSize] = useState(0);
     const [total_ticks, setTotalTicks] = useState(0);
-    const [status, setStatus] = useState<string>('idle');
-    const [pip_size, setPipSize] = useState(2);
+    const [status, setStatus]         = useState<string>('idle');
+    const [pip_size, setPipSize]       = useState(2);
 
     const window_ref = useRef(new RollingDigitWindow(WINDOW_SIZE));
-    const frame_ref = useRef<number | null>(null);
+    const frame_ref  = useRef<number | null>(null);
 
     /* load symbol list once */
     useEffect(() => {
@@ -60,6 +63,7 @@ const DCircles = () => {
         win.reset();
         setDigits(DIGITS.map(d => ({ digit: d, count: 0, percentage: 0 })));
         setCurrentDigit(null);
+        setCurrentPrice(null);
         setSampleSize(0);
         setTotalTicks(0);
         setStatus('connecting');
@@ -78,13 +82,14 @@ const DCircles = () => {
                 setSampleSize(snap.sample_size);
                 setTotalTicks(snap.total_ticks);
                 setCurrentDigit(snap.last_digit);
+                setCurrentPrice(snap.last_quote);
             },
             onTick: tick => {
                 setPipSize(tick.pip_size);
                 const d = getLastDigit(tick.quote, tick.pip_size);
                 win.push(d, tick.quote);
                 setCurrentDigit(d);
-                // throttle paint
+                setCurrentPrice(tick.quote);
                 if (frame_ref.current) return;
                 frame_ref.current = requestAnimationFrame(() => {
                     frame_ref.current = null;
@@ -106,9 +111,9 @@ const DCircles = () => {
     }, [symbol]);
 
     const colors = assignColors(digits);
+    const price_str = current_price !== null ? current_price.toFixed(pip_size) : '—';
 
-    /* triangle x-position: each circle slot is 88px wide */
-    const SLOT_W = 88;
+    /* triangle x-position centred on the active slot */
     const tri_x = current_digit !== null ? current_digit * SLOT_W + SLOT_W / 2 : -999;
 
     const status_label: Record<string, string> = {
@@ -135,7 +140,6 @@ const DCircles = () => {
                             </optgroup>
                         ))}
                         {all_symbols.length === 0 && (
-                            /* fallback while loading */
                             <>
                                 <option value='R_10'>Volatility 10 Index</option>
                                 <option value='1HZ10V'>Volatility 10 (1s) Index</option>
@@ -150,6 +154,18 @@ const DCircles = () => {
                             </>
                         )}
                     </select>
+                </div>
+
+                {/* Live price + last digit */}
+                <div className='dcircles__live'>
+                    <div className='dcircles__live-box dcircles__live-box--price'>
+                        <span className='dcircles__live-label'>Price</span>
+                        <span className='dcircles__live-val'>{price_str}</span>
+                    </div>
+                    <div className='dcircles__live-box dcircles__live-box--digit'>
+                        <span className='dcircles__live-label'>Last Digit</span>
+                        <span className='dcircles__live-val' key={total_ticks}>{current_digit ?? '–'}</span>
+                    </div>
                 </div>
 
                 <div className='dcircles__meta'>
@@ -168,38 +184,43 @@ const DCircles = () => {
                 <span className='dcircles__legend-item' style={{ '--dot-color': '#2196f3' } as React.CSSProperties}>2nd Highest</span>
                 <span className='dcircles__legend-item' style={{ '--dot-color': '#ffb300' } as React.CSSProperties}>2nd Lowest</span>
                 <span className='dcircles__legend-item' style={{ '--dot-color': '#e53935' } as React.CSSProperties}>Lowest %</span>
-                <span className='dcircles__legend-item' style={{ '--dot-color': '#ffffff' } as React.CSSProperties}>Equal</span>
+                <span className='dcircles__legend-item' style={{ '--dot-color': '#bdbdbd' } as React.CSSProperties}>Equal / Normal</span>
                 <span className='dcircles__legend-item dcircles__legend-item--tick'>✓ &gt; 10%</span>
+                <span className='dcircles__legend-item dcircles__legend-item--tri'>▼ Current digit</span>
             </div>
 
             {/* ── circle row + triangle ── */}
             <div className='dcircles__stage'>
-                {/* sky-blue moving triangle */}
+                {/* sky-blue moving triangle indicator */}
                 <div
                     className='dcircles__triangle-wrap'
-                    style={{ transform: `translateX(${tri_x - SLOT_W / 2}px)` }}
+                    style={{
+                        width: `${SLOT_W}px`,
+                        transform: `translateX(${tri_x - SLOT_W / 2}px)`,
+                    }}
                 >
                     <div className='dcircles__triangle' />
                 </div>
 
                 {/* digit circles */}
-                <div className='dcircles__row'>
+                <div className='dcircles__row' style={{ '--slot-w': `${SLOT_W}px`, '--circle-size': `${CIRCLE_SIZE}px` } as React.CSSProperties}>
                     {digits.map(({ digit, percentage }) => {
-                        const color = colors[digit] ?? '#ffffff';
-                        const above10 = percentage > 10;
-                        const text_color = color === '#ffffff' ? 'var(--text-prominent)' : '#fff';
+                        const color      = colors[digit] ?? '#bdbdbd';
+                        const above10    = percentage > 10;
+                        const is_current = current_digit === digit;
+                        const text_color = color === '#bdbdbd' ? 'var(--text-prominent)' : '#fff';
                         return (
                             <div
                                 key={digit}
-                                className={`dcircles__slot ${current_digit === digit ? 'dcircles__slot--active' : ''}`}
+                                className={`dcircles__slot ${is_current ? 'dcircles__slot--active' : ''}`}
                             >
                                 <div
                                     className='dcircles__circle'
                                     style={{
                                         background: color,
-                                        boxShadow: current_digit === digit
-                                            ? `0 0 0 3px #87ceeb, 0 0 16px ${color}88`
-                                            : `0 0 8px ${color}44`,
+                                        boxShadow: is_current
+                                            ? `0 0 0 4px #87ceeb, 0 0 24px ${color}99`
+                                            : `0 0 12px ${color}55`,
                                         color: text_color,
                                     }}
                                 >
@@ -226,11 +247,11 @@ const DCircles = () => {
                     </thead>
                     <tbody>
                         {[...digits].sort((a, b) => b.percentage - a.percentage).map(({ digit, count, percentage }) => {
-                            const color = colors[digit] ?? '#ffffff';
+                            const color = colors[digit] ?? '#bdbdbd';
                             return (
                                 <tr key={digit} className={current_digit === digit ? 'dcircles__table-row--active' : ''}>
                                     <td>
-                                        <span className='dcircles__table-badge' style={{ background: color, color: color === '#ffffff' ? '#333' : '#fff' }}>
+                                        <span className='dcircles__table-badge' style={{ background: color, color: color === '#bdbdbd' ? '#333' : '#fff' }}>
                                             {digit}
                                         </span>
                                     </td>
@@ -243,7 +264,7 @@ const DCircles = () => {
                                         <div className='dcircles__bar-bg'>
                                             <div
                                                 className='dcircles__bar-fill'
-                                                style={{ width: `${Math.min(percentage * 5, 100)}%`, background: color === '#ffffff' ? '#ccc' : color }}
+                                                style={{ width: `${Math.min(percentage * 5, 100)}%`, background: color === '#bdbdbd' ? '#ccc' : color }}
                                             />
                                         </div>
                                     </td>

@@ -145,7 +145,14 @@ const AppContent = observer(() => {
         const retrieveActiveSymbols = () => {
             const { active_symbols } = ApiHelpers.instance;
 
+            // Safety-net: never block the UI more than 6 s waiting for symbols
+            const safety_timeout = setTimeout(() => setIsLoading(false), 6000);
+
             active_symbols.retrieveActiveSymbols(true).then(() => {
+                clearTimeout(safety_timeout);
+                setIsLoading(false);
+            }).catch(() => {
+                clearTimeout(safety_timeout);
                 setIsLoading(false);
             });
         };
@@ -153,12 +160,16 @@ const AppContent = observer(() => {
         if (ApiHelpers?.instance?.active_symbols) {
             retrieveActiveSymbols();
         } else {
-            // This is a workaround to fix the issue where the active symbols are not loaded immediately
-            // when the API is initialized. Should be replaced with RxJS pubsub
+            let attempts = 0;
             const intervalId = setInterval(() => {
+                attempts++;
                 if (ApiHelpers?.instance?.active_symbols) {
                     clearInterval(intervalId);
                     retrieveActiveSymbols();
+                } else if (attempts >= 8) {
+                    // Give up after 8 s and show the UI anyway
+                    clearInterval(intervalId);
+                    setIsLoading(false);
                 }
             }, 1000);
         }
@@ -192,7 +203,7 @@ const AppContent = observer(() => {
                 </Suspense>
             )}
             {is_loading ? (
-                <ChunkLoader message={localize('Initializing Deriv Bot account...')} />
+                <ChunkLoader message={localize('Starting CCTraders…')} />
             ) : (
                 <AuthLoadingWrapper>
                     <ThemeProvider theme={is_dark_mode_on ? 'dark' : 'light'}>

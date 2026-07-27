@@ -8,11 +8,11 @@
         text-decoration: none;
     }
 
-    // Logo + app name mark (shared by the header and the mobile drawer).
     &__logo-mark {
         display: flex;
         align-items: center;
         min-width: 0;
+        gap: 0.8rem;
     }
 
     &__logo-img {
@@ -21,34 +21,40 @@
         object-fit: contain;
     }
 
-    // Letter-badge fallback shown when no logo file/data URL is available.
+    /* CCTraders logo badge — shown when no image file is present */
     &__logo-badge {
         display: flex;
         align-items: center;
         justify-content: center;
         flex: none;
-        border-radius: 0.8rem;
-        background: color-mix(in srgb, var(--brand-primary, var(--text-general)) 10%, transparent);
-        color: var(--brand-primary, var(--text-general));
-        font-weight: 700;
-        font-size: 1.4rem;
+        border-radius: 0.6rem;
+        background: linear-gradient(135deg, #7c3aed, #10b981);
+        color: #fff;
+        font-weight: 900;
+        font-size: 1.3rem;
+        letter-spacing: -0.02em;
         line-height: 1;
+        padding: 0 0.4rem;
+        box-shadow: 0 2px 10px rgb(124 58 237 / 40%);
     }
 
+    /* CCTraders wordmark in header */
     &__logo-text {
-        margin-left: 1.2rem;
-        color: var(--text-general);
-        font-weight: 600;
-        font-size: 1.8rem;
+        margin-left: 0;
+        font-weight: 900;
+        font-size: 1.9rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 220px;
+        letter-spacing: -0.01em;
+        background: linear-gradient(135deg, #7c3aed 0%, #f59e0b 50%, #10b981 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 1px 4px rgb(124 58 237 / 25%));
     }
 
-    // On mobile the mark sits next to the hamburger and the account section, so
-    // tighten the padding and show the logo only — the app name is desktop-only
-    // here to avoid crowding. (The mobile drawer header still shows the name.)
     &--mobile {
         .app-header__logo {
             padding-inline-start: 0.8rem;
@@ -61,8 +67,6 @@
     }
 }
 
-// The same mark inside the mobile drawer header shows the app name (the header's
-// --mobile rule hides it, but the drawer has room) and can use the full available width.
 .mobile-menu__header .app-header__logo-text {
     display: block;
     max-width: 180px;

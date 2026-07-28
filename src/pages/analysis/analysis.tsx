@@ -278,78 +278,137 @@ const Analysis = () => {
                     </div>
                 )}
 
-                {/* RISE / FALL — actual price direction */}
+                {/* RISE / FALL — Multi-timeframe analysis */}
                 {active_tab === 'rise_fall' && (
                     <div className='analysis-v2__rf-wrap'>
-                        {/* Main rise/fall card */}
-                        <div className='analysis-v2__rf-card'>
-                            <div className='analysis-v2__rf-header'>
-                                <h3>📈 Rise / Fall Analysis</h3>
-                                <span className='analysis-v2__rf-subtitle'>
-                                    Based on actual tick-by-tick price direction · {(rise_fall.rise_count + rise_fall.fall_count + rise_fall.flat_count).toLocaleString()} movements
-                                </span>
-                            </div>
 
-                            {/* Rise vs Fall bars */}
-                            <div className='analysis-v2__rf-row'>
-                                <div className={`analysis-v2__rf-side analysis-v2__rf-side--rise ${rise_fall.bias === 'rise' ? 'analysis-v2__rf-side--winning' : ''}`}>
-                                    <span className='analysis-v2__rf-icon'>↑</span>
-                                    <span className='analysis-v2__rf-label'>Rise</span>
-                                    <span className='analysis-v2__rf-val'>{rise_fall.rise_percentage.toFixed(2)}%</span>
-                                    <span className='analysis-v2__rf-count'>{rise_fall.rise_count.toLocaleString()} ticks</span>
-                                </div>
-                                <div className='analysis-v2__rf-divider' />
-                                <div className={`analysis-v2__rf-side analysis-v2__rf-side--fall ${rise_fall.bias === 'fall' ? 'analysis-v2__rf-side--winning' : ''}`}>
-                                    <span className='analysis-v2__rf-icon'>↓</span>
-                                    <span className='analysis-v2__rf-label'>Fall</span>
-                                    <span className='analysis-v2__rf-val'>{rise_fall.fall_percentage.toFixed(2)}%</span>
-                                    <span className='analysis-v2__rf-count'>{rise_fall.fall_count.toLocaleString()} ticks</span>
+                        {/* ── Signal banner ── */}
+                        <div className={`analysis-v2__rf-banner analysis-v2__rf-banner--${rise_fall.strength}`}>
+                            <div className='analysis-v2__rf-banner-icon'>
+                                {rise_fall.bias === 'rise' ? '📈' : rise_fall.bias === 'fall' ? '📉' : '⚖️'}
+                            </div>
+                            <div className='analysis-v2__rf-banner-body'>
+                                <div className='analysis-v2__rf-banner-signal'>{rise_fall.signal}</div>
+                                <div className='analysis-v2__rf-banner-meta'>
+                                    {rise_fall.confluence}/3 windows confirm
+                                    {rise_fall.streak !== 0 && (
+                                        <span className={`analysis-v2__rf-streak analysis-v2__rf-streak--${rise_fall.streak > 0 ? 'rise' : 'fall'}`}>
+                                            &nbsp;·&nbsp;{rise_fall.streak > 0 ? `↑` : `↓`}{Math.abs(rise_fall.streak)}-tick streak
+                                        </span>
+                                    )}
                                 </div>
                             </div>
-
-                            {/* Visual bar */}
-                            <div className='analysis-v2__rf-bar'>
-                                <div
-                                    className='analysis-v2__rf-bar-fill rise'
-                                    style={{ flexGrow: rise_fall.rise_percentage || 0.1 }}
-                                />
-                                <div
-                                    className='analysis-v2__rf-bar-fill fall'
-                                    style={{ flexGrow: rise_fall.fall_percentage || 0.1 }}
-                                />
+                            <div className='analysis-v2__rf-banner-strength'>
+                                {['none','weak','moderate','strong'].map((s, i) => (
+                                    <div
+                                        key={s}
+                                        className={`analysis-v2__rf-strength-dot ${['none','weak','moderate','strong'].indexOf(rise_fall.strength) >= i && rise_fall.strength !== 'none' ? 'analysis-v2__rf-strength-dot--lit' : ''}`}
+                                    />
+                                ))}
                             </div>
-
-                            {/* Flat indicator */}
-                            {rise_fall.flat_count > 0 && (
-                                <div className='analysis-v2__rf-flat'>
-                                    Flat ticks (no change): {rise_fall.flat_count.toLocaleString()}
-                                </div>
-                            )}
                         </div>
 
-                        {/* Bias verdict */}
+                        {/* ── Three timeframe windows ── */}
+                        <div className='analysis-v2__rf-timeframes'>
+                            {/* Short — 20 ticks */}
+                            <div className={`analysis-v2__rf-tf analysis-v2__rf-tf--${rise_fall.short_bias ?? 'neutral'}`}>
+                                <div className='analysis-v2__rf-tf-label'>
+                                    <span className='analysis-v2__rf-tf-period'>⚡ Short</span>
+                                    <span className='analysis-v2__rf-tf-ticks'>20 ticks</span>
+                                </div>
+                                <div className='analysis-v2__rf-tf-dir'>
+                                    {rise_fall.short_filled < 5 ? '—' : rise_fall.short_bias ? rise_fall.short_bias.toUpperCase() : 'NEUTRAL'}
+                                </div>
+                                <div className='analysis-v2__rf-tf-bar'>
+                                    <div className='rise' style={{ flexGrow: rise_fall.short_rise_pct || 0.1 }} />
+                                    <div className='fall' style={{ flexGrow: rise_fall.short_fall_pct || 0.1 }} />
+                                </div>
+                                <div className='analysis-v2__rf-tf-nums'>
+                                    <span className='r'>↑ {rise_fall.short_rise_pct.toFixed(0)}%</span>
+                                    <span className='f'>↓ {rise_fall.short_fall_pct.toFixed(0)}%</span>
+                                </div>
+                                {rise_fall.short_edge > 0.5 && (
+                                    <div className='analysis-v2__rf-tf-edge'>{rise_fall.short_edge.toFixed(1)}% edge</div>
+                                )}
+                            </div>
+
+                            {/* Mid — 100 ticks */}
+                            <div className={`analysis-v2__rf-tf analysis-v2__rf-tf--${rise_fall.mid_bias ?? 'neutral'}`}>
+                                <div className='analysis-v2__rf-tf-label'>
+                                    <span className='analysis-v2__rf-tf-period'>📊 Medium</span>
+                                    <span className='analysis-v2__rf-tf-ticks'>100 ticks</span>
+                                </div>
+                                <div className='analysis-v2__rf-tf-dir'>
+                                    {rise_fall.mid_filled < 20 ? '—' : rise_fall.mid_bias ? rise_fall.mid_bias.toUpperCase() : 'NEUTRAL'}
+                                </div>
+                                <div className='analysis-v2__rf-tf-bar'>
+                                    <div className='rise' style={{ flexGrow: rise_fall.mid_rise_pct || 0.1 }} />
+                                    <div className='fall' style={{ flexGrow: rise_fall.mid_fall_pct || 0.1 }} />
+                                </div>
+                                <div className='analysis-v2__rf-tf-nums'>
+                                    <span className='r'>↑ {rise_fall.mid_rise_pct.toFixed(0)}%</span>
+                                    <span className='f'>↓ {rise_fall.mid_fall_pct.toFixed(0)}%</span>
+                                </div>
+                                {rise_fall.mid_edge > 0.5 && (
+                                    <div className='analysis-v2__rf-tf-edge'>{rise_fall.mid_edge.toFixed(1)}% edge</div>
+                                )}
+                            </div>
+
+                            {/* Long — full window */}
+                            <div className={`analysis-v2__rf-tf analysis-v2__rf-tf--${rise_fall.bias ?? 'neutral'}`}>
+                                <div className='analysis-v2__rf-tf-label'>
+                                    <span className='analysis-v2__rf-tf-period'>🔭 Long</span>
+                                    <span className='analysis-v2__rf-tf-ticks'>{ROLLING_WINDOW_SIZE} ticks</span>
+                                </div>
+                                <div className='analysis-v2__rf-tf-dir'>
+                                    {rise_fall.rise_count + rise_fall.fall_count < 50 ? '—' : rise_fall.bias ? rise_fall.bias.toUpperCase() : 'NEUTRAL'}
+                                </div>
+                                <div className='analysis-v2__rf-tf-bar'>
+                                    <div className='rise' style={{ flexGrow: rise_fall.rise_percentage || 0.1 }} />
+                                    <div className='fall' style={{ flexGrow: rise_fall.fall_percentage || 0.1 }} />
+                                </div>
+                                <div className='analysis-v2__rf-tf-nums'>
+                                    <span className='r'>↑ {rise_fall.rise_percentage.toFixed(0)}%</span>
+                                    <span className='f'>↓ {rise_fall.fall_percentage.toFixed(0)}%</span>
+                                </div>
+                                {rise_fall.bias_edge > 0.5 && (
+                                    <div className='analysis-v2__rf-tf-edge'>{rise_fall.bias_edge.toFixed(1)}% edge</div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* ── Trading recommendation ── */}
                         <div className='analysis-v2__rf-verdict'>
                             <div className='analysis-v2__rf-verdict-title'>Trading Recommendation</div>
-                            {rise_fall.bias ? (
+                            {rise_fall.strength !== 'none' && rise_fall.bias ? (
                                 <div className={`analysis-v2__rf-verdict-body analysis-v2__rf-verdict-body--${rise_fall.bias}`}>
                                     <div className='analysis-v2__rf-verdict-icon'>
                                         {rise_fall.bias === 'rise' ? '📈' : '📉'}
                                     </div>
                                     <div className='analysis-v2__rf-verdict-text'>
                                         <strong>Trade {rise_fall.bias.toUpperCase()}</strong>
-                                        <span>{rise_fall.bias_edge.toFixed(2)}% edge over {rise_fall.bias === 'rise' ? 'FALL' : 'RISE'}</span>
+                                        <span>{rise_fall.bias_edge.toFixed(2)}% long-term edge · {rise_fall.confluence}/3 windows aligned</span>
                                         <span className='analysis-v2__rf-verdict-pct'>
-                                            {rise_fall.bias === 'rise' ? rise_fall.rise_percentage.toFixed(2) : rise_fall.fall_percentage.toFixed(2)}% of ticks moved {rise_fall.bias}
+                                            {rise_fall.streak !== 0
+                                                ? `Current streak: ${Math.abs(rise_fall.streak)} consecutive ${rise_fall.streak > 0 ? 'rises' : 'falls'}`
+                                                : `${(rise_fall.bias === 'rise' ? rise_fall.rise_percentage : rise_fall.fall_percentage).toFixed(1)}% of long-window ticks moved ${rise_fall.bias}`
+                                            }
                                         </span>
                                     </div>
                                 </div>
                             ) : (
                                 <div className='analysis-v2__rf-verdict-neutral'>
-                                    ⚖️ Market is balanced — Rise and Fall are equally likely right now. Avoid trading until a bias develops.
+                                    ⚖️ Market is balanced across timeframes — no confirmed Rise or Fall bias. Wait for confluence before trading.
                                 </div>
                             )}
                         </div>
 
+                        {/* ── Flat ticks note ── */}
+                        {rise_fall.flat_count > 0 && (
+                            <div className='analysis-v2__rf-flat'>
+                                {rise_fall.flat_count.toLocaleString()} flat ticks (price unchanged)
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

@@ -227,7 +227,7 @@ const DCircles = () => {
                                 >
                                     <span className='dcircles__digit'>{digit}</span>
                                     <span className='dcircles__pct'>{percentage.toFixed(1)}%</span>
-                                    {above10 && <span className='dcircles__tick'>▲</span>}
+                                    {above10 && <span className='dcircles__tick'>✓</span>}
                                 </div>
                             </div>
                         );

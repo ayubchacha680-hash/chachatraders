@@ -223,12 +223,21 @@
 
     &__tick {
         position: absolute;
-        top: -7px;
-        right: -5px;
-        font-size: 0.7rem;
-        color: #FFD700;
-        filter: drop-shadow(0 0 4px #FFD700);
+        top: -6px;
+        right: -6px;
+        width: 1.6rem;
+        height: 1.6rem;
+        border-radius: 50%;
+        background: #16c784;
+        border: 1.5px solid #0a3d26;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
         font-weight: 900;
+        color: #fff;
+        line-height: 1;
+        box-shadow: 0 0 6px #16c78488;
     }
 
     /* ── Bias panel ── */

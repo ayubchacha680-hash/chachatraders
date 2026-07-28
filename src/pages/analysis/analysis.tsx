@@ -298,6 +298,19 @@ const Analysis = () => {
                                     )}
                                 </div>
                             </div>
+                            {/* Rise / Fall percentages — always visible in banner */}
+                            <div className='analysis-v2__rf-banner-pcts'>
+                                <div className='analysis-v2__rf-banner-pct analysis-v2__rf-banner-pct--rise'>
+                                    <span className='analysis-v2__rf-banner-pct-arrow'>↑</span>
+                                    <span className='analysis-v2__rf-banner-pct-val'>{rise_fall.rise_percentage.toFixed(1)}%</span>
+                                    <span className='analysis-v2__rf-banner-pct-label'>Rise</span>
+                                </div>
+                                <div className='analysis-v2__rf-banner-pct analysis-v2__rf-banner-pct--fall'>
+                                    <span className='analysis-v2__rf-banner-pct-arrow'>↓</span>
+                                    <span className='analysis-v2__rf-banner-pct-val'>{rise_fall.fall_percentage.toFixed(1)}%</span>
+                                    <span className='analysis-v2__rf-banner-pct-label'>Fall</span>
+                                </div>
+                            </div>
                             <div className='analysis-v2__rf-banner-strength'>
                                 {['none','weak','moderate','strong'].map((s, i) => (
                                     <div

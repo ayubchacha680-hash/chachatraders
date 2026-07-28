@@ -69,7 +69,7 @@
     display: flex;
     flex-direction: column;
     height: var(--tab-content-height, calc(100vh - 12rem));
-    overflow-y: auto;
+    overflow: hidden;
     gap: 0;
 
     /* Banner */
@@ -370,6 +370,7 @@
     /* ── Content area ── */
     &__content {
         flex: 1;
+        min-height: 0;       /* critical — lets flex child shrink and scroll */
         overflow-y: auto;
         padding: 1.6rem 2rem;
     }
@@ -552,6 +553,53 @@
     &__rf-banner-icon { font-size: 3.2rem; line-height: 1; flex-shrink: 0; }
 
     &__rf-banner-body { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+
+    /* Rise / Fall % pills in banner */
+    &__rf-banner-pcts {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    &__rf-banner-pct {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.3rem 0.9rem;
+        border-radius: 0.6rem;
+        background: rgba(255 255 255 / 6%);
+
+        &--rise { border: 1px solid rgba(22 199 132 / 40%); }
+        &--fall { border: 1px solid rgba(229 57 53 / 40%); }
+    }
+
+    &__rf-banner-pct-arrow {
+        font-size: 1.2rem;
+        font-weight: 900;
+        line-height: 1;
+
+        .analysis-v2__rf-banner-pct--rise & { color: #16c784; }
+        .analysis-v2__rf-banner-pct--fall  & { color: #e53935; }
+    }
+
+    &__rf-banner-pct-val {
+        font-size: 1.7rem;
+        font-weight: 800;
+        line-height: 1;
+        font-family: 'IBM Plex Mono', monospace;
+
+        .analysis-v2__rf-banner-pct--rise & { color: #16c784; }
+        .analysis-v2__rf-banner-pct--fall  & { color: #e53935; }
+    }
+
+    &__rf-banner-pct-label {
+        font-size: 1rem;
+        color: var(--text-less-prominent);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+    }
 
     &__rf-banner-signal {
         font-size: 2rem;

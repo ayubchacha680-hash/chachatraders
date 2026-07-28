@@ -72,10 +72,10 @@
     overflow: hidden;
     gap: 0;
 
-    /* Banner */
+    /* Banner — single compact toolbar row */
     &__banner {
         background: linear-gradient(135deg, #1a1f2e 0%, #232b3e 60%, #1e2a3a 100%);
-        padding: 1.4rem 2rem;
+        padding: 0.7rem 1.6rem;
         flex-shrink: 0;
     }
 
@@ -84,33 +84,31 @@
         align-items: center;
         justify-content: space-between;
         flex-wrap: wrap;
-        gap: 1.2rem;
+        gap: 0.8rem;
     }
 
     &__banner-title {
         color: #fff;
-        font-size: 1.8rem;
+        font-size: 1.4rem;
         font-weight: 700;
-        margin: 0 0 0.2rem;
+        margin: 0;
     }
 
     &__banner-subtitle {
-        color: rgba(255 255 255 / 50%);
-        font-size: 1.2rem;
-        margin: 0;
+        display: none; /* hidden to save space */
     }
 
     &__banner-meta {
         display: flex;
         align-items: center;
-        gap: 0.8rem;
+        gap: 0.6rem;
         flex-wrap: wrap;
     }
 
     &__status {
-        padding: 0.3rem 1rem;
+        padding: 0.2rem 0.8rem;
         border-radius: 2rem;
-        font-size: 1.1rem;
+        font-size: 1rem;
         font-weight: 700;
         background: rgba(255 255 255 / 10%);
         color: rgba(255 255 255 / 70%);
@@ -121,27 +119,26 @@
         &--closed      { background: #e5393522; color: #e53935; border-color: #e5393544; }
     }
 
-    &__rate { font-size: 1.2rem; color: rgba(255 255 255 / 55%); }
+    &__rate { font-size: 1.1rem; color: rgba(255 255 255 / 55%); }
 
     /* Price badge in header */
     &__price-badge {
         display: flex;
-        flex-direction: column;
         align-items: center;
+        gap: 0.3rem;
         background: rgba(22 199 132 / 15%);
         border: 1px solid rgba(22 199 132 / 30%);
-        border-radius: 0.6rem;
-        padding: 0.2rem 0.8rem;
+        border-radius: 0.5rem;
+        padding: 0.2rem 0.6rem;
     }
 
     &__price-label {
         font-size: 0.9rem;
         color: rgba(255 255 255 / 45%);
-        line-height: 1.2;
     }
 
     &__price-val {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-weight: 700;
         color: #16c784;
         font-family: 'IBM Plex Mono', monospace;
@@ -150,35 +147,34 @@
     /* Last digit badge in header */
     &__last-digit-badge {
         display: flex;
-        flex-direction: column;
         align-items: center;
+        gap: 0.3rem;
         background: rgba(255 255 255 / 10%);
         border: 1px solid rgba(255 255 255 / 15%);
-        border-radius: 0.6rem;
-        padding: 0.2rem 0.8rem;
+        border-radius: 0.5rem;
+        padding: 0.2rem 0.6rem;
         animation: digit-pop 220ms ease-out;
     }
 
     &__ld-label {
         font-size: 0.9rem;
         color: rgba(255 255 255 / 45%);
-        line-height: 1.2;
     }
 
     &__ld-val {
-        font-size: 1.8rem;
+        font-size: 1.4rem;
         font-weight: 800;
         color: #fff;
         line-height: 1;
     }
 
-    /* Controls row */
+    /* Controls row — compact single line */
     &__controls {
         display: flex;
         flex-wrap: wrap;
-        align-items: flex-end;
-        gap: 1.6rem;
-        padding: 1.2rem 2rem;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.6rem 1.6rem;
         background: var(--general-section-1);
         border-bottom: 1px solid var(--general-section-2);
         flex-shrink: 0;
@@ -199,13 +195,13 @@
     }
 
     &__select {
-        min-width: 24rem;
-        padding: 0.8rem 1.2rem;
+        min-width: 20rem;
+        padding: 0.45rem 0.9rem;
         border: 1px solid var(--general-section-2);
-        border-radius: 0.6rem;
+        border-radius: 0.5rem;
         background: var(--general-main-1);
         color: var(--text-general);
-        font-size: 1.4rem;
+        font-size: 1.3rem;
         cursor: pointer;
 
         &:focus { outline: none; border-color: var(--border-active, #ff444f); }
@@ -214,32 +210,31 @@
     /* Live info boxes (price + last digit + window) */
     &__live-info {
         display: flex;
-        align-items: stretch;
-        gap: 0.8rem;
+        align-items: center;
+        gap: 0.6rem;
         flex-wrap: wrap;
+        margin-inline-start: auto;
     }
 
     &__live-box {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        padding: 0.6rem 1.2rem;
-        border-radius: 0.8rem;
+        gap: 0.4rem;
+        padding: 0.3rem 0.8rem;
+        border-radius: 0.5rem;
         background: var(--general-main-1);
         border: 1px solid var(--general-section-2);
-        min-width: 9rem;
     }
 
     &__live-box-label {
-        font-size: 1rem;
+        font-size: 0.95rem;
         color: var(--text-less-prominent);
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        line-height: 1.4;
+        letter-spacing: 0.04em;
     }
 
     &__live-box-val {
-        font-size: 1.6rem;
+        font-size: 1.3rem;
         font-weight: 700;
         color: var(--text-prominent);
 
@@ -249,7 +244,6 @@
         }
 
         &--digit {
-            font-size: 2rem;
             color: #ff444f;
             animation: digit-pop 220ms ease-out;
         }
@@ -266,8 +260,8 @@
 
     /* ── Trading Signal Panel ── */
     &__signal-card {
-        margin: 1.2rem 2rem 0;
-        border-radius: 0.8rem;
+        margin: 0.6rem 1.6rem 0;
+        border-radius: 0.6rem;
         background: linear-gradient(135deg, #0d2a1a 0%, #0d1f2d 100%);
         border: 1px solid rgba(22 199 132 / 25%);
         overflow: hidden;
@@ -275,8 +269,8 @@
     }
 
     &__signal-title {
-        padding: 0.8rem 1.6rem;
-        font-size: 1.3rem;
+        padding: 0.5rem 1.2rem;
+        font-size: 1.1rem;
         font-weight: 700;
         color: #16c784;
         border-bottom: 1px solid rgba(22 199 132 / 15%);
@@ -286,10 +280,10 @@
     &__signal-row {
         display: flex;
         align-items: center;
-        gap: 1.2rem;
-        padding: 0.8rem 1.6rem;
+        gap: 1rem;
+        padding: 0.45rem 1.2rem;
         border-bottom: 1px solid rgba(255 255 255 / 5%);
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         flex-wrap: wrap;
 
         &:last-child { border-bottom: none; }
@@ -297,42 +291,42 @@
 
     &__signal-type {
         color: rgba(255 255 255 / 55%);
-        min-width: 9rem;
-        font-size: 1.1rem;
+        min-width: 8rem;
+        font-size: 1rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
 
     &__signal-bias {
         font-weight: 800;
-        font-size: 1.4rem;
-        min-width: 6rem;
+        font-size: 1.3rem;
+        min-width: 5.5rem;
     }
 
     &__signal-edge {
         color: rgba(255 255 255 / 45%);
-        font-size: 1.2rem;
+        font-size: 1.1rem;
     }
 
     &__signal-rec {
         font-weight: 600;
-        font-size: 1.2rem;
-        padding: 0.2rem 0.8rem;
+        font-size: 1.1rem;
+        padding: 0.15rem 0.7rem;
         border-radius: 1.2rem;
         background: rgba(255 255 255 / 6%);
     }
 
     &__signal-neutral {
         color: rgba(255 255 255 / 35%);
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         font-style: italic;
     }
 
     /* ── Tabs ── */
     &__tabs {
         display: flex;
-        gap: 0.4rem;
-        padding: 1.2rem 2rem 0;
+        gap: 0.3rem;
+        padding: 0.7rem 1.6rem 0;
         background: var(--general-main-1);
         border-bottom: 1px solid var(--general-section-2);
         flex-shrink: 0;
@@ -342,13 +336,13 @@
     &__tab {
         display: flex;
         align-items: center;
-        gap: 0.6rem;
-        padding: 0.8rem 1.6rem;
+        gap: 0.5rem;
+        padding: 0.55rem 1.2rem;
         border: none;
-        border-radius: 0.6rem 0.6rem 0 0;
+        border-radius: 0.5rem 0.5rem 0 0;
         background: transparent;
         color: var(--text-less-prominent);
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-weight: 500;
         cursor: pointer;
         transition: all 0.15s ease;
@@ -365,14 +359,14 @@
         }
     }
 
-    &__tab-emoji { font-size: 1.4rem; }
+    &__tab-emoji { font-size: 1.2rem; }
 
     /* ── Content area ── */
     &__content {
         flex: 1;
-        min-height: 0;       /* critical — lets flex child shrink and scroll */
+        min-height: 0;
         overflow-y: auto;
-        padding: 1.6rem 2rem;
+        padding: 1rem 1.6rem;
     }
 
     /* ── Digit stats ── */

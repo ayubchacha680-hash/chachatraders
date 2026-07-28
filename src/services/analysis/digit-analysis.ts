@@ -265,10 +265,10 @@ export class RollingDigitWindow {
     }
 
     private riseFallStats(): TRiseFallStats {
-        // Long window
-        const long_total  = this.rf_rise + this.rf_fall + this.rf_flat;
-        const rise_pct    = toPercentage(this.rf_rise, long_total);
-        const fall_pct    = toPercentage(this.rf_fall, long_total);
+        // Long window — percentages out of (rise+fall) only so they sum to 100%
+        const long_mv     = this.rf_rise + this.rf_fall;
+        const rise_pct    = toPercentage(this.rf_rise, long_mv || 1);
+        const fall_pct    = toPercentage(this.rf_fall, long_mv || 1);
         const long_bias: 'rise' | 'fall' | null =
             this.rf_rise === this.rf_fall ? null : this.rf_rise > this.rf_fall ? 'rise' : 'fall';
         const bias_edge   = Math.abs(rise_pct - fall_pct);

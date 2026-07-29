@@ -46,11 +46,12 @@ import RunStrategy from '../dashboard/run-strategy';
 import './main.scss';
 import './run-fab.scss';
 
-const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
-const Tutorial    = lazy(() => import('../tutorials'));
-const Analysis    = lazy(() => import('../analysis'));
-const FreeBots    = lazy(() => import('../free-bots'));
-const DCircles    = lazy(() => import('../dcircles'));
+const ChartWrapper   = lazy(() => import('../chart/chart-wrapper'));
+const Tutorial       = lazy(() => import('../tutorials'));
+const MultiScanner   = lazy(() => import('../multiscanner'));
+const Analysis       = lazy(() => import('../analysis'));
+const FreeBots       = lazy(() => import('../free-bots'));
+const DCircles       = lazy(() => import('../dcircles'));
 
 
 /* ── Ultra-fast Run/Stop floating button ─────────────────────────────────── */
@@ -122,7 +123,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'chart', 'tutorial', 'analysis', 'free_bots', 'dcircles'];
+    const hash = ['dashboard', 'bot_builder', 'chart', 'tutorial', 'multiscanner', 'analysis', 'free_bots', 'dcircles'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -380,7 +381,22 @@ const AppWrapper = observer(() => {
                                 </div>
                             </div>
 
-                            {/* 4 – Analysis */}
+                            {/* 4 – MultiScanner */}
+                            <div
+                                label={
+                                    <>
+                                        <span style={{ fontSize: '1.6rem', lineHeight: '1' }}>📡</span>
+                                        <Localize i18n_default_text='MultiScanner' />
+                                    </>
+                                }
+                                id='id-multiscanner'
+                            >
+                                <Suspense fallback={<ChunkLoader message={localize('Please wait, loading scanner...')} />}>
+                                    <MultiScanner />
+                                </Suspense>
+                            </div>
+
+                            {/* 5 – Analysis */}
                             <div
                                 label={
                                     <>

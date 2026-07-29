@@ -1,0 +1,436 @@
+/* ── MultiScanner ──────────────────────────────────────────────────────── */
+
+.msc {
+    padding: 1.6rem 2rem 3rem;
+    min-height: 100%;
+    background: var(--general-main-1);
+    color: var(--text-general);
+    font-size: 1.3rem;
+
+    /* ── Header ── */
+    &__header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1.2rem;
+        margin-bottom: 1.6rem;
+    }
+
+    &__title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 0.4rem;
+        letter-spacing: 0.02em;
+    }
+
+    &__subtitle {
+        margin: 0;
+        font-size: 1.2rem;
+        opacity: 0.65;
+    }
+
+    &__legend {
+        display: flex;
+        gap: 1.2rem;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    &__legend-item {
+        font-size: 1.2rem;
+        font-weight: 600;
+        padding: 0.3rem 0.8rem;
+        border-radius: 0.4rem;
+
+        &--rise  { color: #00c087; background: rgba(0, 192, 135, 0.12); }
+        &--fall  { color: #e84040; background: rgba(232, 64, 64, 0.12); }
+        &--neutral { color: #6b7a99; background: rgba(107, 122, 153, 0.12); }
+    }
+
+    /* ── Indicator legend ── */
+    &__ind-legend {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.2rem;
+        margin-bottom: 1.6rem;
+        padding: 0.8rem 1.2rem;
+        background: var(--general-section-1);
+        border-radius: 0.6rem;
+        font-size: 1.15rem;
+        opacity: 0.8;
+    }
+
+    &__ind-legend-title {
+        font-weight: 700;
+        opacity: 0.7;
+        margin-right: 0.4rem;
+    }
+
+    &__ind-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    &__ind-dot {
+        width: 0.8rem;
+        height: 0.8rem;
+        border-radius: 50%;
+        flex-shrink: 0;
+        &--rise  { background: #00c087; }
+        &--fall  { background: #e84040; }
+        &--neutral { background: #6b7a99; }
+    }
+
+    /* ── Summary bar ── */
+    /* ── Controls ── */
+    &__controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        margin-bottom: 1.6rem;
+    }
+
+    &__filter {
+        display: flex;
+        gap: 0.6rem;
+    }
+
+    &__filter-btn {
+        padding: 0.5rem 1.2rem;
+        border-radius: 2rem;
+        border: 1px solid var(--general-section-2);
+        background: transparent;
+        color: var(--text-general);
+        cursor: pointer;
+        font-size: 1.2rem;
+        transition: background 0.15s, border-color 0.15s;
+
+        &:hover { background: var(--general-section-1); }
+
+        &--active {
+            background: var(--brand-secondary, #4bb4b3);
+            border-color: var(--brand-secondary, #4bb4b3);
+            color: #fff;
+        }
+    }
+
+    &__sort {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    &__sort-label { opacity: 0.6; font-size: 1.15rem; }
+
+    &__sort-btn {
+        padding: 0.4rem 1rem;
+        border-radius: 0.4rem;
+        border: 1px solid var(--general-section-2);
+        background: transparent;
+        color: var(--text-general);
+        cursor: pointer;
+        font-size: 1.2rem;
+        transition: background 0.15s;
+
+        &:hover { background: var(--general-section-1); }
+        &--active {
+            background: var(--general-section-2);
+            font-weight: 700;
+        }
+    }
+
+    /* ── Grid ── */
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(26rem, 1fr));
+        gap: 1.4rem;
+    }
+
+    /* ── Disclaimer ── */
+    &__disclaimer {
+        margin-top: 2.4rem;
+        text-align: center;
+        font-size: 1.1rem;
+        opacity: 0.45;
+    }
+}
+
+/* ── Summary bar ─────────────────────────────────────────────────────────── */
+.msc-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.6rem;
+
+    @media (max-width: 768px) {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    &__item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        border-radius: 0.8rem;
+        border: 1px solid var(--general-section-2);
+        background: var(--general-section-1);
+        text-align: center;
+
+        &--rise   { border-color: rgba(0, 192, 135, 0.3); }
+        &--fall   { border-color: rgba(232, 64, 64, 0.3); }
+        &--strong { border-color: rgba(255, 200, 0, 0.3); }
+        &--active { border-color: rgba(75, 180, 179, 0.3); }
+    }
+
+    &__val {
+        font-size: 2.4rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 0.4rem;
+
+        .msc-summary__item--rise   & { color: #00c087; }
+        .msc-summary__item--fall   & { color: #e84040; }
+        .msc-summary__item--strong & { color: #ffc800; }
+        .msc-summary__item--active & { color: #4bb4b3; }
+    }
+
+    &__lbl {
+        font-size: 1.15rem;
+        opacity: 0.7;
+    }
+}
+
+/* ── Market card ─────────────────────────────────────────────────────────── */
+.msc-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: 1.4rem 1.4rem 1.2rem;
+    border-radius: 1rem;
+    border: 1px solid var(--general-section-2);
+    background: var(--general-main-1);
+    transition: box-shadow 0.2s, border-color 0.2s;
+
+    &--rise {
+        border-color: rgba(0, 192, 135, 0.35);
+        &.msc-card--strong {
+            box-shadow: 0 0 16px rgba(0, 192, 135, 0.2);
+        }
+    }
+
+    &--fall {
+        border-color: rgba(232, 64, 64, 0.35);
+        &.msc-card--strong {
+            box-shadow: 0 0 16px rgba(232, 64, 64, 0.2);
+        }
+    }
+
+    &--active {
+        border-width: 2px;
+    }
+
+    /* ── Header ── */
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.8rem;
+    }
+
+    &__name {
+        font-size: 1.35rem;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__signal-badge {
+        padding: 0.3rem 0.8rem;
+        border-radius: 2rem;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #fff;
+        background: var(--general-section-2);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    /* ── Price ── */
+    &__price {
+        display: flex;
+        align-items: baseline;
+        gap: 0.6rem;
+    }
+
+    &__price-val {
+        font-size: 1.5rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+
+        &--loading { opacity: 0.45; font-size: 1.2rem; }
+    }
+
+    &__price-chg {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    /* ── Strength bar ── */
+    &__strength {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    &__strength-seg {
+        flex: 1;
+        height: 0.5rem;
+        border-radius: 0.25rem;
+        background: var(--general-section-2);
+        transition: background 0.2s, opacity 0.2s;
+    }
+
+    &__strength-lbl {
+        font-size: 1.1rem;
+        opacity: 0.6;
+        margin-left: 0.4rem;
+        min-width: 5.5rem;
+    }
+
+    /* ── Indicator dots ── */
+    &__indicators {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+
+    /* ── Pattern ── */
+    &__pattern {
+        font-size: 1.1rem;
+        opacity: 0.6;
+        font-style: italic;
+        min-height: 1.4rem;
+    }
+
+    /* ── Countdown ── */
+    &__countdown {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.6rem;
+        border-radius: 0.6rem;
+        background: rgba(255, 200, 0, 0.06);
+        border: 1px dashed rgba(255, 200, 0, 0.3);
+    }
+
+    &__countdown-label {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #ffc800;
+    }
+
+    /* ── Enter now ── */
+    &__enter {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.8rem;
+        border-radius: 0.6rem;
+        background: rgba(0, 192, 135, 0.08);
+        border: 1px solid rgba(0, 192, 135, 0.3);
+
+        .msc-card--fall & {
+            background: rgba(232, 64, 64, 0.08);
+            border-color: rgba(232, 64, 64, 0.3);
+        }
+
+        &--flash {
+            animation: msc-flash 0.4s ease-in-out 3;
+        }
+    }
+
+    &__enter-now {
+        font-size: 1.6rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        color: #00c087;
+
+        .msc-card--fall & { color: #e84040; }
+    }
+
+    &__enter-timer {
+        font-size: 1.1rem;
+        opacity: 0.7;
+    }
+
+    /* ── Waiting ── */
+    &__waiting {
+        font-size: 1.15rem;
+        opacity: 0.55;
+        padding: 0.4rem 0;
+
+        &-ticks { font-size: 1.1rem; }
+    }
+}
+
+/* ── Indicator dot component ─────────────────────────────────────────────── */
+.msc-dot {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 1.1rem;
+
+    &__dot {
+        width: 0.7rem;
+        height: 0.7rem;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    &__label { opacity: 0.7; }
+
+    &--rise .msc-dot__dot   { background: #00c087; box-shadow: 0 0 4px rgba(0, 192, 135, 0.6); }
+    &--fall .msc-dot__dot   { background: #e84040; box-shadow: 0 0 4px rgba(232, 64, 64, 0.6); }
+    &--neutral .msc-dot__dot { background: #6b7a99; }
+}
+
+/* ── Countdown ring ──────────────────────────────────────────────────────── */
+.msc-ring {
+    flex-shrink: 0;
+
+    &__bg {
+        fill: none;
+        stroke: rgba(255, 200, 0, 0.15);
+        stroke-width: 5;
+    }
+
+    &__fill {
+        fill: none;
+        stroke: #ffc800;
+        stroke-width: 5;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.85s linear;
+    }
+
+    &__text {
+        fill: #ffc800;
+        font-size: 1.8rem;
+        font-weight: 800;
+        dominant-baseline: auto;
+    }
+}
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
+@keyframes msc-flash {
+    0%   { opacity: 1; transform: scale(1); }
+    50%  { opacity: 0.6; transform: scale(1.03); }
+    100% { opacity: 1; transform: scale(1); }
+}

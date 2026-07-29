@@ -16,7 +16,7 @@ npm run dev        # dev server on port 5000 (Replit workflow)
 npm run build      # production build → dist/
 ```
 
-The Replit workflow `Start application` runs `npx rsbuild dev --port 5000` and hot-reloads on changes.
+The Replit workflow `Start application` runs `./node_modules/.bin/rsbuild dev --port 5000` and hot-reloads on changes.
 
 ## Environment variables / secrets
 

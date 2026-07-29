@@ -5,6 +5,8 @@
     display: flex;
     flex-direction: column;
     gap: 1.2rem;
+    background: #000;
+    color: #e0e0e0;
 
     /* ── Toolbar ── */
     &__toolbar {
@@ -14,8 +16,8 @@
         gap: 1.2rem;
         padding: 1rem 1.4rem;
         border-radius: 0.8rem;
-        background: var(--general-main-1);
-        border: 1px solid var(--general-section-2);
+        background: #111;
+        border: 1px solid #2a2a2a;
         flex-shrink: 0;
     }
 
@@ -151,7 +153,7 @@
         flex-shrink: 0;
     }
 
-    /* ── Gold triangle cursor ── */
+    /* ── Blue triangle cursor ── */
     &__triangle-wrap {
         position: absolute;
         top: 0;
@@ -167,8 +169,8 @@
         height: 0;
         border-left: 12px solid transparent;
         border-right: 12px solid transparent;
-        border-top: 20px solid #FFD700;
-        filter: drop-shadow(0 0 8px #FFD700) drop-shadow(0 0 16px #FFD70088);
+        border-top: 20px solid #2979ff;
+        filter: drop-shadow(0 0 8px #2979ff) drop-shadow(0 0 16px #2979ff88);
     }
 
     &__row {

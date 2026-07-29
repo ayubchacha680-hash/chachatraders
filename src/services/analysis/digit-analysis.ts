@@ -362,7 +362,7 @@ export class RollingDigitWindow {
             if (digit > pair.over_barrier)  over_count  += this.counts[digit];
             if (digit < pair.under_barrier) under_count += this.counts[digit];
         }
-        const over_percentage  = toPercentage(over_count, total);
+        const over_percentage  = toPercentage(over_count,  total);
         const under_percentage = toPercentage(under_count, total);
         return {
             ...pair, over_count, under_count, over_percentage, under_percentage,

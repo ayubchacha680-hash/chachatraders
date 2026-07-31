@@ -2,310 +2,274 @@ import React, { useEffect, useRef, useState } from 'react';
 import useMultiScanner, { TIndicatorSignal, TMarketSignal, TScanPhase } from '@/hooks/useMultiScanner';
 import './multiscanner.scss';
 
-/* ── Helpers ─────────────────────────────────────────────────────────────── */
-const signalColor = (s: TIndicatorSignal) =>
-    s === 'rise' ? '#00c087' : s === 'fall' ? '#e84040' : '#6b7a99';
+/* ── Small helpers ───────────────────────────────────────────────────────── */
+const SIG_COLOR = { rise: '#00c087', fall: '#e84040', neutral: '#6b7a99' } as const;
 
-const signalLabel = (s: TIndicatorSignal) =>
-    s === 'rise' ? '▲ RISE' : s === 'fall' ? '▼ FALL' : '— WAIT';
+const sigColor = (s: TIndicatorSignal) => SIG_COLOR[s];
 
-const strengthLabel = (n: number) => {
-    if (n >= 4) return 'Max';
-    if (n === 3) return 'Strong';
-    if (n === 2) return 'Moderate';
-    return 'Weak';
-};
+const IndArrow = ({ sig }: { sig: TIndicatorSignal }) => (
+    <span className={`msc-arrow msc-arrow--${sig}`}>
+        {sig === 'rise' ? '▲' : sig === 'fall' ? '▼' : '—'}
+    </span>
+);
 
-const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-
-/* ── Countdown ring ──────────────────────────────────────────────────────── */
-const CountdownRing = ({ value }: { value: number }) => {
-    const r = 28;
+/* ── Countdown ring (SVG) ────────────────────────────────────────────────── */
+const Ring = ({ value }: { value: number }) => {
+    const r    = 18;
     const circ = 2 * Math.PI * r;
-    const offset = circ * (1 - value / 10);
     return (
-        <svg className='msc-ring' viewBox='0 0 64 64' width={64} height={64}>
-            <circle cx={32} cy={32} r={r} className='msc-ring__bg' />
+        <svg className='msc-ring' viewBox='0 0 40 40' width={40} height={40}>
+            <circle cx={20} cy={20} r={r} className='msc-ring__bg' />
             <circle
-                cx={32}
-                cy={32}
-                r={r}
+                cx={20} cy={20} r={r}
                 className='msc-ring__fill'
                 strokeDasharray={circ}
-                strokeDashoffset={offset}
+                strokeDashoffset={circ * (1 - value / 10)}
                 style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
             />
-            <text x={32} y={37} textAnchor='middle' className='msc-ring__text'>
-                {value}
-            </text>
+            <text x={20} y={25} textAnchor='middle' className='msc-ring__num'>{value}</text>
         </svg>
     );
 };
 
-/* ── Indicator dot ───────────────────────────────────────────────────────── */
-const IndDot = ({ label, signal }: { label: string; signal: TIndicatorSignal }) => (
-    <div className={`msc-dot msc-dot--${signal}`} title={label}>
-        <span className='msc-dot__dot' />
-        <span className='msc-dot__label'>{label}</span>
+/* ── Strength pips ───────────────────────────────────────────────────────── */
+const StrengthPips = ({ n, sig }: { n: number; sig: TIndicatorSignal }) => (
+    <div className='msc-pips'>
+        {[0, 1, 2, 3].map(i => (
+            <span
+                key={i}
+                className='msc-pips__pip'
+                style={{ background: i < n ? sigColor(sig) : undefined, opacity: i < n ? 1 : 0.2 }}
+            />
+        ))}
     </div>
 );
 
-/* ── Market card ─────────────────────────────────────────────────────────── */
-const MarketCard = ({ m }: { m: TMarketSignal }) => {
+/* ── Entry status cell ───────────────────────────────────────────────────── */
+const EntryCell = ({ m }: { m: TMarketSignal }) => {
     const [flash, setFlash] = useState(false);
     const prev_phase = useRef<TScanPhase>(m.phase);
 
-    // Flash "ENTER NOW" when countdown hits 0 and phase transitions to active
     useEffect(() => {
         if (prev_phase.current === 'countdown' && m.phase === 'active') {
             setFlash(true);
-            const t = setTimeout(() => setFlash(false), 2500);
+            const t = setTimeout(() => setFlash(false), 2600);
             return () => clearTimeout(t);
         }
         prev_phase.current = m.phase;
     }, [m.phase]);
 
-    const is_strong = m.strength >= 3 && m.signal !== 'neutral';
-    const clazz = [
-        'msc-card',
-        `msc-card--${m.signal}`,
-        is_strong ? 'msc-card--strong' : '',
-        m.phase === 'active' ? 'msc-card--active' : '',
-    ]
-        .filter(Boolean)
-        .join(' ');
-
-    const short_name = m.display_name.replace(' Index', '').replace('Volatility ', 'V');
-
-    return (
-        <div className={clazz}>
-            {/* Header */}
-            <div className='msc-card__header'>
-                <div className='msc-card__name'>{short_name}</div>
-                <div
-                    className='msc-card__signal-badge'
-                    style={{ background: m.signal !== 'neutral' ? signalColor(m.signal) : undefined }}
-                >
-                    {signalLabel(m.signal)}
-                </div>
+    if (m.phase === 'loading') {
+        return <span className='msc-status msc-status--loading'>Loading 3-min candles…</span>;
+    }
+    if (m.phase === 'countdown') {
+        return (
+            <div className='msc-status msc-status--countdown'>
+                <Ring value={m.countdown} />
+                <span className='msc-status__cd-label'>
+                    {m.signal === 'rise' ? '▲ RISE' : '▼ FALL'} in {m.countdown}s
+                </span>
             </div>
-
-            {/* Price */}
-            <div className='msc-card__price'>
-                {m.last_price != null ? (
-                    <>
-                        <span className='msc-card__price-val'>{m.last_price.toFixed(5)}</span>
-                        {m.price_change_pct != null && (
-                            <span
-                                className='msc-card__price-chg'
-                                style={{ color: m.price_change_pct >= 0 ? '#00c087' : '#e84040' }}
-                            >
-                                {m.price_change_pct >= 0 ? '+' : ''}
-                                {m.price_change_pct.toFixed(4)}%
-                            </span>
-                        )}
-                    </>
-                ) : (
-                    <span className='msc-card__price-val msc-card__price-val--loading'>
-                        {m.status === 'connecting' ? 'Connecting…' : 'Loading…'}
-                    </span>
+        );
+    }
+    if (m.phase === 'active' || flash) {
+        const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+        return (
+            <div className={`msc-status msc-status--active msc-status--${m.signal} ${flash ? 'msc-status--flash' : ''}`}>
+                <span className='msc-status__now'>⚡ ENTER {m.signal === 'rise' ? 'RISE ▲' : 'FALL ▼'}</span>
+                {m.time_remaining_s > 0 && (
+                    <span className='msc-status__timer'>{fmt(m.time_remaining_s)} left</span>
                 )}
             </div>
+        );
+    }
+    if (m.strength >= 2 && m.signal !== 'neutral') {
+        return <span className='msc-status msc-status--building'>📊 Signal building…</span>;
+    }
+    return <span className='msc-status msc-status--wait'>⏳ Waiting…</span>;
+};
 
-            {/* Strength bar */}
-            <div className='msc-card__strength'>
-                {[0, 1, 2, 3].map(n => (
-                    <div
-                        key={n}
-                        className='msc-card__strength-seg'
-                        style={{
-                            background: n < m.strength ? signalColor(m.signal) : undefined,
-                            opacity: n < m.strength ? 1 : 0.2,
-                        }}
-                    />
-                ))}
-                <span className='msc-card__strength-lbl'>{strengthLabel(m.strength)}</span>
-            </div>
+/* ── Market row ──────────────────────────────────────────────────────────── */
+const MarketRow = ({ m, rank }: { m: TMarketSignal; rank: number }) => {
+    const is_active   = m.phase === 'active' || m.phase === 'countdown';
+    const short_name  = m.display_name
+        .replace(' Index', '')
+        .replace('Volatility ', 'V');
 
-            {/* Indicator dots */}
-            <div className='msc-card__indicators'>
-                <IndDot label='Short' signal={m.indicators.short_momentum} />
-                <IndDot label='Mid' signal={m.indicators.mid_momentum} />
-                <IndDot label='MA' signal={m.indicators.ma_crossover} />
-                <IndDot label='Pattern' signal={m.indicators.candle_pattern} />
-            </div>
+    return (
+        <tr
+            className={[
+                'msc-row',
+                `msc-row--${m.signal}`,
+                is_active      ? 'msc-row--highlight' : '',
+                m.strength >= 3 ? 'msc-row--strong'    : '',
+            ].filter(Boolean).join(' ')}
+        >
+            {/* Rank */}
+            <td className='msc-cell msc-cell--rank'>{rank}</td>
 
-            {/* Pattern name */}
-            <div className='msc-card__pattern'>{m.indicators.pattern_name}</div>
-
-            {/* Phase area */}
-            {m.phase === 'countdown' ? (
-                <div className='msc-card__countdown'>
-                    <CountdownRing value={m.countdown} />
-                    <span className='msc-card__countdown-label'>
-                        Enter {m.signal === 'rise' ? '▲ RISE' : '▼ FALL'} in…
-                    </span>
+            {/* Market name + price */}
+            <td className='msc-cell msc-cell--market'>
+                <div className='msc-market__name'>{short_name}</div>
+                <div className='msc-market__price'>
+                    {m.last_price != null
+                        ? m.last_price.toFixed(3)
+                        : m.status === 'connecting' ? 'Connecting…' : '—'}
                 </div>
-            ) : m.phase === 'active' || flash ? (
-                <div className={`msc-card__enter ${flash ? 'msc-card__enter--flash' : ''}`}>
-                    <div className='msc-card__enter-now'>⚡ ENTER NOW!</div>
-                    {m.time_remaining_s > 0 && (
-                        <div className='msc-card__enter-timer'>
-                            Signal valid: {formatTime(m.time_remaining_s)}
-                        </div>
-                    )}
-                </div>
-            ) : (
-                <div className='msc-card__waiting'>
-                    {m.tick_count < 22 ? (
-                        <span className='msc-card__waiting-ticks'>Collecting ticks ({m.tick_count}/22)…</span>
-                    ) : m.signal === 'neutral' || m.strength < 2 ? (
-                        <span>⏳ Waiting for confluence…</span>
-                    ) : (
-                        <span>📊 Signal building…</span>
-                    )}
-                </div>
-            )}
-        </div>
+            </td>
+
+            {/* Signal */}
+            <td className='msc-cell msc-cell--signal'>
+                <span
+                    className='msc-signal-badge'
+                    style={{ background: m.signal !== 'neutral' ? sigColor(m.signal) : undefined }}
+                >
+                    {m.signal === 'rise' ? '▲ RISE' : m.signal === 'fall' ? '▼ FALL' : '— WAIT'}
+                </span>
+            </td>
+
+            {/* Strength */}
+            <td className='msc-cell msc-cell--strength'>
+                <StrengthPips n={m.strength} sig={m.signal} />
+                <span className='msc-strength-num'>{m.strength}/4</span>
+            </td>
+
+            {/* RSI */}
+            <td className='msc-cell msc-cell--ind'>
+                <IndArrow sig={m.indicators.rsi} />
+                {m.indicators.rsi_val !== null && (
+                    <span className='msc-ind-val'>{m.indicators.rsi_val.toFixed(1)}</span>
+                )}
+            </td>
+
+            {/* EMA Cross */}
+            <td className='msc-cell msc-cell--ind'>
+                <IndArrow sig={m.indicators.ema_cross} />
+                <span className='msc-ind-label'>EMA</span>
+            </td>
+
+            {/* MACD */}
+            <td className='msc-cell msc-cell--ind'>
+                <IndArrow sig={m.indicators.macd} />
+                <span className='msc-ind-label'>MACD</span>
+            </td>
+
+            {/* Candle pattern */}
+            <td className='msc-cell msc-cell--pattern'>
+                <IndArrow sig={m.indicators.candle_pattern} />
+                <span className='msc-pattern-name'>{m.indicators.pattern_name}</span>
+            </td>
+
+            {/* Entry countdown */}
+            <td className='msc-cell msc-cell--entry'>
+                <EntryCell m={m} />
+            </td>
+        </tr>
     );
 };
 
-/* ── Scanner summary bar ─────────────────────────────────────────────────── */
-const SummaryBar = ({ markets }: { markets: TMarketSignal[] }) => {
-    const rise = markets.filter(m => m.signal === 'rise' && m.strength >= 2).length;
-    const fall = markets.filter(m => m.signal === 'fall' && m.strength >= 2).length;
-    const strong = markets.filter(m => m.strength >= 3 && m.signal !== 'neutral').length;
-    const active = markets.filter(m => m.phase === 'active').length;
-    const countdown = markets.filter(m => m.phase === 'countdown').length;
+/* ── Summary strip ───────────────────────────────────────────────────────── */
+const Summary = ({ markets }: { markets: TMarketSignal[] }) => {
+    const rise    = markets.filter(m => m.signal === 'rise' && m.strength >= 2).length;
+    const fall    = markets.filter(m => m.signal === 'fall' && m.strength >= 2).length;
+    const strong  = markets.filter(m => m.strength >= 3 && m.signal !== 'neutral').length;
+    const entries = markets.filter(m => m.phase === 'active' || m.phase === 'countdown').length;
 
     return (
         <div className='msc-summary'>
             <div className='msc-summary__item msc-summary__item--rise'>
-                <span className='msc-summary__val'>{rise}</span>
-                <span className='msc-summary__lbl'>▲ Rise signals</span>
+                <b>{rise}</b> <span>▲ Rise</span>
             </div>
             <div className='msc-summary__item msc-summary__item--fall'>
-                <span className='msc-summary__val'>{fall}</span>
-                <span className='msc-summary__lbl'>▼ Fall signals</span>
+                <b>{fall}</b> <span>▼ Fall</span>
             </div>
             <div className='msc-summary__item msc-summary__item--strong'>
-                <span className='msc-summary__val'>{strong}</span>
-                <span className='msc-summary__lbl'>⚡ Strong (3+)</span>
+                <b>{strong}</b> <span>⚡ Strong</span>
             </div>
-            <div className='msc-summary__item msc-summary__item--active'>
-                <span className='msc-summary__val'>{active + countdown}</span>
-                <span className='msc-summary__lbl'>🎯 Entry ready</span>
+            <div className='msc-summary__item msc-summary__item--entry'>
+                <b>{entries}</b> <span>🎯 Entry ready</span>
             </div>
         </div>
     );
 };
 
-/* ── Filter/sort bar ─────────────────────────────────────────────────────── */
+/* ── Main ────────────────────────────────────────────────────────────────── */
 type TFilter = 'all' | 'rise' | 'fall' | 'strong';
-type TSort = 'default' | 'strength' | 'signal';
 
-/* ── Main component ──────────────────────────────────────────────────────── */
 const MultiScanner = () => {
     const { markets } = useMultiScanner();
     const [filter, setFilter] = useState<TFilter>('all');
-    const [sort, setSort] = useState<TSort>('strength');
 
     const displayed = [...markets]
         .filter(m => {
-            if (filter === 'rise') return m.signal === 'rise';
-            if (filter === 'fall') return m.signal === 'fall';
+            if (filter === 'rise')   return m.signal === 'rise';
+            if (filter === 'fall')   return m.signal === 'fall';
             if (filter === 'strong') return m.strength >= 3 && m.signal !== 'neutral';
             return true;
         })
         .sort((a, b) => {
-            if (sort === 'strength') return b.strength - a.strength;
-            if (sort === 'signal')
-                return (b.signal === 'neutral' ? -1 : 0) - (a.signal === 'neutral' ? -1 : 0);
-            return 0;
+            // Entry-ready first, then by strength
+            const aScore = (a.phase === 'active' ? 30 : a.phase === 'countdown' ? 20 : 0) + a.strength;
+            const bScore = (b.phase === 'active' ? 30 : b.phase === 'countdown' ? 20 : 0) + b.strength;
+            return bScore - aScore;
         });
 
     return (
         <div className='msc'>
-            {/* ── Header ── */}
+            {/* Header */}
             <div className='msc__header'>
                 <div className='msc__header-left'>
-                    <h2 className='msc__title'>📡 MultiScanner</h2>
+                    <h2 className='msc__title'>📡 MultiScanner — 3-Min Signals</h2>
                     <p className='msc__subtitle'>
-                        Live Rise/Fall signals across all 12 Deriv volatility markets · 3-min signal window · 10s entry
-                        countdown
+                        All 12 Deriv volatility markets · 3-min OHLC candles · RSI · EMA Cross · MACD · Candlestick patterns
+                        · 10s entry countdown
                     </p>
                 </div>
-                <div className='msc__legend'>
-                    <span className='msc__legend-item msc__legend-item--rise'>▲ Rise</span>
-                    <span className='msc__legend-item msc__legend-item--fall'>▼ Fall</span>
-                    <span className='msc__legend-item msc__legend-item--neutral'>— Neutral</span>
-                </div>
             </div>
 
-            {/* ── Summary bar ── */}
-            <SummaryBar markets={markets} />
+            {/* Summary */}
+            <Summary markets={markets} />
 
-            {/* ── Indicators legend ── */}
-            <div className='msc__ind-legend'>
-                <span className='msc__ind-legend-title'>Indicators:</span>
-                <span className='msc__ind-legend-item'>
-                    <span className='msc__ind-dot msc__ind-dot--rise' />
-                    Short Momentum (20 ticks)
-                </span>
-                <span className='msc__ind-legend-item'>
-                    <span className='msc__ind-dot msc__ind-dot--rise' />
-                    Mid Trend (50 ticks)
-                </span>
-                <span className='msc__ind-legend-item'>
-                    <span className='msc__ind-dot msc__ind-dot--rise' />
-                    MA Crossover (10/30)
-                </span>
-                <span className='msc__ind-legend-item'>
-                    <span className='msc__ind-dot msc__ind-dot--rise' />
-                    Candlestick Pattern
-                </span>
-            </div>
-
-            {/* ── Controls ── */}
+            {/* Filter buttons */}
             <div className='msc__controls'>
-                <div className='msc__filter'>
-                    {(['all', 'rise', 'fall', 'strong'] as TFilter[]).map(f => (
-                        <button
-                            key={f}
-                            className={`msc__filter-btn ${filter === f ? 'msc__filter-btn--active' : ''}`}
-                            onClick={() => setFilter(f)}
-                        >
-                            {f === 'all' ? 'All' : f === 'rise' ? '▲ Rise' : f === 'fall' ? '▼ Fall' : '⚡ Strong'}
-                        </button>
-                    ))}
-                </div>
-                <div className='msc__sort'>
-                    <span className='msc__sort-label'>Sort:</span>
+                {(['all', 'rise', 'fall', 'strong'] as TFilter[]).map(f => (
                     <button
-                        className={`msc__sort-btn ${sort === 'strength' ? 'msc__sort-btn--active' : ''}`}
-                        onClick={() => setSort('strength')}
+                        key={f}
+                        className={`msc__filter-btn ${filter === f ? 'msc__filter-btn--active' : ''}`}
+                        onClick={() => setFilter(f)}
                     >
-                        Strength
+                        {f === 'all' ? 'All Markets' : f === 'rise' ? '▲ Rise Only' : f === 'fall' ? '▼ Fall Only' : '⚡ Strong Only'}
                     </button>
-                    <button
-                        className={`msc__sort-btn ${sort === 'default' ? 'msc__sort-btn--active' : ''}`}
-                        onClick={() => setSort('default')}
-                    >
-                        Default
-                    </button>
-                </div>
-            </div>
-
-            {/* ── Market grid ── */}
-            <div className='msc__grid'>
-                {displayed.map(m => (
-                    <MarketCard key={m.symbol} m={m} />
                 ))}
+                <span className='msc__candle-note'>3-min candles · auto-refresh live</span>
             </div>
 
-            {/* ── Disclaimer ── */}
+            {/* Table */}
+            <div className='msc__table-wrap'>
+                <table className='msc-table'>
+                    <thead>
+                        <tr className='msc-thead'>
+                            <th className='msc-th msc-th--rank'>#</th>
+                            <th className='msc-th msc-th--market'>Market</th>
+                            <th className='msc-th msc-th--signal'>3M Signal</th>
+                            <th className='msc-th msc-th--strength'>Strength</th>
+                            <th className='msc-th msc-th--ind'>RSI(14)</th>
+                            <th className='msc-th msc-th--ind'>EMA 5/20</th>
+                            <th className='msc-th msc-th--ind'>MACD</th>
+                            <th className='msc-th msc-th--pattern'>Pattern</th>
+                            <th className='msc-th msc-th--entry'>Entry Countdown</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {displayed.map((m, idx) => (
+                            <MarketRow key={m.symbol} m={m} rank={idx + 1} />
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
             <p className='msc__disclaimer'>
-                ⚠️ Signals are statistical — not financial advice. Always apply your own risk management.
+                ⚠️ Statistical signals only — not financial advice. Apply your own risk management.
             </p>
         </div>
     );

@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { DIGIT_SYMBOLS } from '@/constants/analysis';
-import { PublicTickSocket, TSocketStatus } from '@/services/analysis/public-tick-socket';
+import { CandleSocket, TCandle } from '@/services/analysis/candle-socket';
+import { TSocketStatus } from '@/services/analysis/public-tick-socket';
 
+/* ── Types ───────────────────────────────────────────────────────────────── */
 export type TIndicatorSignal = 'rise' | 'fall' | 'neutral';
-export type TScanPhase = 'analyzing' | 'countdown' | 'active';
+export type TScanPhase = 'loading' | 'analyzing' | 'countdown' | 'active';
 
 export type TMarketIndicators = {
-    short_momentum: TIndicatorSignal;   // last 20 moves
-    mid_momentum: TIndicatorSignal;     // last 50 moves
-    ma_crossover: TIndicatorSignal;     // 10-MA vs 30-MA
-    candle_pattern: TIndicatorSignal;   // candlestick pattern
+    rsi: TIndicatorSignal;
+    rsi_val: number | null;          // numeric RSI value for display
+    ema_cross: TIndicatorSignal;     // EMA5 vs EMA20
+    macd: TIndicatorSignal;          // EMA8 vs EMA21
+    candle_pattern: TIndicatorSignal;
     pattern_name: string;
 };
 
@@ -18,136 +21,137 @@ export type TMarketSignal = {
     display_name: string;
     status: TSocketStatus;
     last_price: number | null;
-    price_change_pct: number | null;
+    candle_count: number;
     signal: TIndicatorSignal;
-    strength: number; // 0-4: how many indicators agree
+    strength: number;          // 0–4: how many indicators agree
     indicators: TMarketIndicators;
-    tick_count: number;
     phase: TScanPhase;
-    countdown: number;        // 10 → 0 during countdown
-    time_remaining_s: number; // seconds left in 3-min active window
+    countdown: number;         // 10 → 0
+    time_remaining_s: number;  // seconds left in 3-min active window
 };
 
-/* ── Price ring buffer ───────────────────────────────────────────────────── */
-class PriceBuffer {
-    private buf: Float64Array;
-    private w = 0;
-    private filled = 0;
+/* ── Indicator math ──────────────────────────────────────────────────────── */
 
-    constructor(private cap: number) {
-        this.buf = new Float64Array(cap);
+/** Wilder RSI on last `period+1` closes. Returns null if not enough data. */
+function rsi(closes: number[], period = 14): number | null {
+    if (closes.length < period + 1) return null;
+    const slice = closes.slice(-(period + 1));
+    let gains = 0, losses = 0;
+    for (let i = 1; i < slice.length; i++) {
+        const diff = slice[i] - slice[i - 1];
+        if (diff > 0) gains += diff;
+        else losses -= diff;
     }
-
-    push(price: number) {
-        this.buf[this.w] = price;
-        this.w = (this.w + 1) % this.cap;
-        if (this.filled < this.cap) this.filled++;
-    }
-
-    /** Returns last `n` prices, oldest first. */
-    last(n: number): number[] {
-        const count = Math.min(n, this.filled);
-        const result = new Array<number>(count);
-        for (let i = 0; i < count; i++) {
-            result[i] = this.buf[(this.w - count + i + this.cap) % this.cap];
-        }
-        return result;
-    }
-
-    get size() {
-        return this.filled;
-    }
+    const avg_gain = gains / period;
+    const avg_loss = losses / period;
+    if (avg_loss === 0) return 100;
+    return 100 - 100 / (1 + avg_gain / avg_loss);
 }
 
-/* ── Signal helpers ─────────────────────────────────────────────────────── */
-function risePct(prices: number[]): number {
-    let rises = 0, moves = 0;
-    for (let i = 1; i < prices.length; i++) {
-        if (prices[i] !== prices[i - 1]) {
-            moves++;
-            if (prices[i] > prices[i - 1]) rises++;
-        }
-    }
-    return moves > 0 ? (rises / moves) * 100 : 50;
+/** Exponential moving average across all closes. Returns null if not enough data. */
+function ema(closes: number[], period: number): number | null {
+    if (closes.length < period) return null;
+    const k = 2 / (period + 1);
+    let val = closes.slice(0, period).reduce((a, b) => a + b, 0) / period;
+    for (let i = period; i < closes.length; i++) val = closes[i] * k + val * (1 - k);
+    return val;
 }
 
-function ma(prices: number[], n: number): number | null {
-    if (prices.length < n) return null;
-    const slice = prices.slice(prices.length - n);
-    return slice.reduce((a, b) => a + b, 0) / n;
-}
+/** Detect a candlestick pattern from up to the last 3 closed candles. */
+function detectPattern(candles: TCandle[]): { name: string; signal: TIndicatorSignal } {
+    if (candles.length < 2) return { name: '—', signal: 'neutral' };
 
-function detectPattern(prices: number[]): { name: string; signal: TIndicatorSignal } {
-    if (prices.length < 10) return { name: '—', signal: 'neutral' };
+    const c  = candles[candles.length - 1]; // last closed candle
+    const p  = candles[candles.length - 2]; // previous candle
+    const pp = candles.length >= 3 ? candles[candles.length - 3] : null;
 
-    // Group last 10 ticks into two 5-tick mini-candles
-    const p1 = prices.slice(-10, -5);
-    const p2 = prices.slice(-5);
+    const cBody  = Math.abs(c.close  - c.open);
+    const pBody  = Math.abs(p.close  - p.open);
+    const cRange = c.high - c.low;
+    const cUpper = c.high - Math.max(c.open, c.close);
+    const cLower = Math.min(c.open, c.close) - c.low;
+    const cBull  = c.close > c.open;
+    const pBull  = p.close > p.open;
 
-    const c1o = p1[0], c1c = p1[4];
-    const c2o = p2[0], c2c = p2[4];
-    const c1body = Math.abs(c1c - c1o);
-    const c2body = Math.abs(c2c - c2o);
-    const c2high = Math.max(...p2);
-    const c2low = Math.min(...p2);
-    const c2upper = c2high - Math.max(c2o, c2c);
-    const c2lower = Math.min(c2o, c2c) - c2low;
+    // Three White Soldiers (3 consecutive bullish candles, each closing higher)
+    if (pp && c.close > p.close && p.close > pp.close && cBull && pBull && pp.close > pp.open)
+        return { name: '3 White Soldiers', signal: 'rise' };
 
-    // Bullish engulfing
-    if (c1c < c1o && c2c > c2o && c2body > c1body * 1.05)
+    // Three Black Crows
+    if (pp && c.close < p.close && p.close < pp.close && !cBull && !pBull && pp.close < pp.open)
+        return { name: '3 Black Crows', signal: 'fall' };
+
+    // Bullish Engulfing
+    if (!pBull && cBull && c.open <= p.close && c.close >= p.open && cBody > pBody)
         return { name: 'Bullish Engulf', signal: 'rise' };
-    // Bearish engulfing
-    if (c1c > c1o && c2c < c2o && c2body > c1body * 1.05)
+
+    // Bearish Engulfing
+    if (pBull && !cBull && c.open >= p.close && c.close <= p.open && cBody > pBody)
         return { name: 'Bearish Engulf', signal: 'fall' };
-    // Hammer (long lower shadow, bullish close)
-    if (c2body > 0 && c2lower >= 1.5 * c2body && c2upper <= 0.5 * c2body && c2c > c2o)
+
+    // Hammer (bullish reversal: long lower wick, small body, small upper wick)
+    if (!pBull && cLower >= 2 * cBody && cUpper <= 0.5 * cBody && cRange > 0)
         return { name: 'Hammer 🔨', signal: 'rise' };
-    // Shooting star (long upper shadow, bearish close)
-    if (c2body > 0 && c2upper >= 1.5 * c2body && c2lower <= 0.5 * c2body && c2c < c2o)
+
+    // Shooting Star (bearish reversal: long upper wick, small body)
+    if (pBull && cUpper >= 2 * cBody && cLower <= 0.5 * cBody && cRange > 0)
         return { name: 'Shooting Star ⭐', signal: 'fall' };
-    // Three consecutive rising ticks
-    const t3 = prices.slice(-3);
-    if (t3[2] > t3[1] && t3[1] > t3[0]) return { name: 'Rising 3', signal: 'rise' };
-    if (t3[2] < t3[1] && t3[1] < t3[0]) return { name: 'Falling 3', signal: 'fall' };
-    // Doji (tiny body vs range)
-    const c2range = c2high - c2low;
-    if (c2range > 0 && c2body / c2range < 0.08) return { name: 'Doji ✝', signal: 'neutral' };
-    // Plain bar
+
+    // Morning Star (3-candle: bearish, small doji-like, bullish)
+    if (pp && !pp.open && pp.close < pp.open && cBull && c.close > (pp.open + pp.close) / 2)
+        return { name: 'Morning Star', signal: 'rise' };
+
+    // Doji (body < 5 % of range)
+    if (cRange > 0 && cBody / cRange < 0.05)
+        return { name: 'Doji ✝', signal: 'neutral' };
+
+    // Plain momentum bar
     return {
-        name: c2c > c2o ? 'Bullish Bar' : c2c < c2o ? 'Bearish Bar' : 'Flat Bar',
-        signal: c2c > c2o ? 'rise' : c2c < c2o ? 'fall' : 'neutral',
+        name: cBull ? 'Bullish Bar' : 'Bearish Bar',
+        signal: cBull ? 'rise' : 'fall',
     };
 }
 
-function computeSignal(buf: PriceBuffer): {
+/** Full signal computation from closed 3-min candles. */
+function computeSignal(candles: TCandle[]): {
     signal: TIndicatorSignal;
     strength: number;
     indicators: TMarketIndicators;
 } {
-    const p100 = buf.last(100);
-    const p50 = p100.slice(-50);
-    const p20 = p100.slice(-20);
+    // Use only closed candles (drop the live/last one which is still forming)
+    const closed = candles.length > 1 ? candles.slice(0, -1) : candles;
+    const closes = closed.map(c => c.close);
 
-    const short_pct = risePct(p20);
-    const short_momentum: TIndicatorSignal = short_pct > 60 ? 'rise' : short_pct < 40 ? 'fall' : 'neutral';
+    // RSI(14)
+    const rsi_val = rsi(closes, 14);
+    const rsi_sig: TIndicatorSignal =
+        rsi_val === null ? 'neutral' : rsi_val > 60 ? 'rise' : rsi_val < 40 ? 'fall' : 'neutral';
 
-    const mid_pct = risePct(p50);
-    const mid_momentum: TIndicatorSignal = mid_pct > 55 ? 'rise' : mid_pct < 45 ? 'fall' : 'neutral';
-
-    const ma10 = ma(p100, 10);
-    const ma30 = ma(p100, 30);
-    const ma_crossover: TIndicatorSignal =
-        ma10 !== null && ma30 !== null
-            ? ma10 > ma30 * 1.000015
-                ? 'rise'
-                : ma10 < ma30 * 0.999985
-                ? 'fall'
-                : 'neutral'
+    // EMA 5 vs EMA 20 crossover
+    const ema5  = ema(closes, 5);
+    const ema20 = ema(closes, 20);
+    const ema_cross: TIndicatorSignal =
+        ema5 !== null && ema20 !== null
+            ? ema5 > ema20 * 1.00005 ? 'rise'
+            : ema5 < ema20 * 0.99995 ? 'fall'
+            : 'neutral'
             : 'neutral';
 
-    const { name: pattern_name, signal: candle_pattern } = detectPattern(p100);
+    // MACD-like: EMA8 vs EMA21
+    const ema8  = ema(closes, 8);
+    const ema21 = ema(closes, 21);
+    const macd: TIndicatorSignal =
+        ema8 !== null && ema21 !== null
+            ? ema8 > ema21 * 1.00003 ? 'rise'
+            : ema8 < ema21 * 0.99997 ? 'fall'
+            : 'neutral'
+            : 'neutral';
 
-    const votes = [short_momentum, mid_momentum, ma_crossover, candle_pattern];
+    // Candlestick pattern (last 3 closed)
+    const { name: pattern_name, signal: candle_pattern } = detectPattern(closed.slice(-3));
+
+    // Majority vote across 4 indicators
+    const votes = [rsi_sig, ema_cross, macd, candle_pattern];
     const rise_v = votes.filter(v => v === 'rise').length;
     const fall_v = votes.filter(v => v === 'fall').length;
 
@@ -155,25 +159,28 @@ function computeSignal(buf: PriceBuffer): {
     let strength = 0;
     if (rise_v > fall_v) {
         strength = rise_v;
-        signal = rise_v >= 2 ? 'rise' : 'neutral';
+        signal   = rise_v >= 2 ? 'rise' : 'neutral';
     } else if (fall_v > rise_v) {
         strength = fall_v;
-        signal = fall_v >= 2 ? 'fall' : 'neutral';
+        signal   = fall_v >= 2 ? 'fall' : 'neutral';
     }
 
     return {
         signal,
         strength,
-        indicators: { short_momentum, mid_momentum, ma_crossover, candle_pattern, pattern_name },
+        indicators: { rsi: rsi_sig, rsi_val, ema_cross, macd, candle_pattern, pattern_name },
     };
 }
 
-/* ── Hook ────────────────────────────────────────────────────────────────── */
+/* ── Constants ───────────────────────────────────────────────────────────── */
+const GRANULARITY      = 180; // 3-minute candles
+const HISTORY_COUNT    = 60;  // 60 × 3 min = 3 hours of history
+const COUNTDOWN_START  = 10;
+const ACTIVE_WINDOW_MS = 3 * 60 * 1000; // 3 minutes
 
-const COUNTDOWN_START = 10;
-const ACTIVE_DURATION_MS = 3 * 60 * 1000; // 3 minutes
-
+/* ── Per-market mutable meta (not in React state) ────────────────────────── */
 type TMeta = {
+    candles: TCandle[];        // ring of closed + 1 live candle
     phase: TScanPhase;
     countdown: number;
     active_until: number;
@@ -181,44 +188,44 @@ type TMeta = {
     prev_strength: number;
 };
 
+/* ── Hook ─────────────────────────────────────────────────────────────────── */
 const useMultiScanner = () => {
-    const init = (): TMarketSignal[] =>
+    const [markets, setMarkets] = useState<TMarketSignal[]>(() =>
         DIGIT_SYMBOLS.map(s => ({
-            symbol: s.symbol,
-            display_name: s.display_name,
-            status: 'idle' as TSocketStatus,
-            last_price: null,
-            price_change_pct: null,
-            signal: 'neutral' as TIndicatorSignal,
-            strength: 0,
+            symbol:        s.symbol,
+            display_name:  s.display_name,
+            status:        'idle' as TSocketStatus,
+            last_price:    null,
+            candle_count:  0,
+            signal:        'neutral' as TIndicatorSignal,
+            strength:      0,
             indicators: {
-                short_momentum: 'neutral' as TIndicatorSignal,
-                mid_momentum: 'neutral' as TIndicatorSignal,
-                ma_crossover: 'neutral' as TIndicatorSignal,
-                candle_pattern: 'neutral' as TIndicatorSignal,
-                pattern_name: '—',
+                rsi:           'neutral' as TIndicatorSignal,
+                rsi_val:       null,
+                ema_cross:     'neutral' as TIndicatorSignal,
+                macd:          'neutral' as TIndicatorSignal,
+                candle_pattern:'neutral' as TIndicatorSignal,
+                pattern_name:  '—',
             },
-            tick_count: 0,
-            phase: 'analyzing' as TScanPhase,
-            countdown: 0,
-            time_remaining_s: 0,
-        }));
+            phase:           'loading' as TScanPhase,
+            countdown:       0,
+            time_remaining_s:0,
+        }))
+    );
 
-    const [markets, setMarkets] = useState<TMarketSignal[]>(init);
-
-    const sockets_ref = useRef<PublicTickSocket[]>([]);
-    const buffers_ref = useRef<PriceBuffer[]>([]);
-    const meta_ref = useRef<TMeta[]>(
+    const sockets_ref = useRef<CandleSocket[]>([]);
+    const meta_ref    = useRef<TMeta[]>(
         DIGIT_SYMBOLS.map(() => ({
-            phase: 'analyzing' as TScanPhase,
-            countdown: 0,
-            active_until: 0,
-            prev_signal: 'neutral' as TIndicatorSignal,
+            candles:       [],
+            phase:         'loading' as TScanPhase,
+            countdown:     0,
+            active_until:  0,
+            prev_signal:   'neutral' as TIndicatorSignal,
             prev_strength: 0,
         }))
     );
 
-    // 1-second interval for countdown / active-window ticking
+    /* 1-second ticker for countdown / active-window display */
     useEffect(() => {
         const timer = setInterval(() => {
             const metas = meta_ref.current;
@@ -228,21 +235,21 @@ const useMultiScanner = () => {
                     if (meta.phase === 'countdown') {
                         if (meta.countdown > 1) {
                             meta.countdown--;
-                            return { ...m, phase: 'countdown', countdown: meta.countdown, time_remaining_s: 0 };
-                        } else {
-                            // countdown done → activate 3-min window
-                            meta.countdown = 0;
-                            meta.phase = 'active';
-                            meta.active_until = Date.now() + ACTIVE_DURATION_MS;
-                            return { ...m, phase: 'active', countdown: 0, time_remaining_s: Math.round(ACTIVE_DURATION_MS / 1000) };
+                            return { ...m, phase: 'countdown', countdown: meta.countdown };
                         }
-                    } else if (meta.phase === 'active') {
-                        const remaining = Math.max(0, Math.round((meta.active_until - Date.now()) / 1000));
-                        if (remaining === 0) {
+                        // countdown done → open 3-min active window
+                        meta.countdown    = 0;
+                        meta.phase        = 'active';
+                        meta.active_until = Date.now() + ACTIVE_WINDOW_MS;
+                        return { ...m, phase: 'active', countdown: 0, time_remaining_s: Math.round(ACTIVE_WINDOW_MS / 1000) };
+                    }
+                    if (meta.phase === 'active') {
+                        const rem = Math.max(0, Math.round((meta.active_until - Date.now()) / 1000));
+                        if (rem === 0) {
                             meta.phase = 'analyzing';
                             return { ...m, phase: 'analyzing', time_remaining_s: 0 };
                         }
-                        return { ...m, time_remaining_s: remaining };
+                        return { ...m, time_remaining_s: rem };
                     }
                     return m;
                 })
@@ -251,87 +258,97 @@ const useMultiScanner = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // WebSocket subscriptions for all 12 markets
+    /* WebSocket subscriptions */
     useEffect(() => {
-        const sockets = DIGIT_SYMBOLS.map(() => new PublicTickSocket());
-        const buffers = DIGIT_SYMBOLS.map(() => new PriceBuffer(200));
+        const sockets = DIGIT_SYMBOLS.map(() => new CandleSocket());
         sockets_ref.current = sockets;
-        buffers_ref.current = buffers;
 
-        const updateMarket = (idx: number, new_price: number | null, status: TSocketStatus) => {
-            const buf = buffers[idx];
+        const updateMarket = (idx: number, status: TSocketStatus) => {
             const meta = meta_ref.current[idx];
+            if (meta.candles.length < 2) {
+                setMarkets(prev => {
+                    const next = [...prev];
+                    next[idx] = { ...prev[idx], status, candle_count: meta.candles.length };
+                    return next;
+                });
+                return;
+            }
+
+            const { signal, strength, indicators } = computeSignal(meta.candles);
+            const last_price = meta.candles[meta.candles.length - 1]?.close ?? null;
+
+            // Trigger 10-s countdown when signal fires strong (≥3) and we're idle
+            if (
+                meta.phase === 'analyzing' &&
+                strength >= 3 &&
+                signal !== 'neutral' &&
+                (meta.prev_strength < 3 || signal !== meta.prev_signal)
+            ) {
+                meta.phase     = 'countdown';
+                meta.countdown = COUNTDOWN_START;
+            }
+
+            // Direction flip during active window → reset
+            if (
+                meta.phase === 'active' &&
+                signal !== 'neutral' &&
+                meta.prev_signal !== 'neutral' &&
+                signal !== meta.prev_signal
+            ) {
+                meta.phase = 'analyzing';
+            }
+
+            meta.prev_signal   = signal;
+            meta.prev_strength = strength;
 
             setMarkets(prev => {
-                const prev_m = prev[idx];
-                let { signal, strength, indicators } = prev_m;
-
-                if (buf.size >= 22) {
-                    ({ signal, strength, indicators } = computeSignal(buf));
-                }
-
-                // Compute price change %
-                let price_change_pct = prev_m.price_change_pct;
-                if (new_price !== null && prev_m.last_price !== null && prev_m.last_price !== 0) {
-                    price_change_pct = ((new_price - prev_m.last_price) / prev_m.last_price) * 100;
-                }
-
-                // Trigger countdown when signal becomes strong (≥3) and wasn't before
-                if (
-                    meta.phase === 'analyzing' &&
-                    strength >= 3 &&
-                    signal !== 'neutral' &&
-                    (meta.prev_strength < 3 || signal !== meta.prev_signal)
-                ) {
-                    meta.phase = 'countdown';
-                    meta.countdown = COUNTDOWN_START;
-                }
-
-                // If signal flips direction during active window → reset
-                if (meta.phase === 'active' && signal !== 'neutral' && signal !== meta.prev_signal && meta.prev_signal !== 'neutral') {
-                    meta.phase = 'analyzing';
-                }
-
-                meta.prev_signal = signal;
-                meta.prev_strength = strength;
-
-                const next: TMarketSignal = {
-                    ...prev_m,
+                const next = [...prev];
+                next[idx] = {
+                    ...prev[idx],
                     status,
-                    last_price: new_price ?? prev_m.last_price,
-                    price_change_pct,
+                    last_price,
+                    candle_count:  meta.candles.length,
                     signal,
                     strength,
                     indicators,
-                    tick_count: prev_m.tick_count + (new_price !== null ? 1 : 0),
-                    phase: meta.phase,
-                    countdown: meta.countdown,
+                    phase:         meta.phase,
+                    countdown:     meta.countdown,
+                    time_remaining_s: meta.phase === 'active'
+                        ? Math.max(0, Math.round((meta.active_until - Date.now()) / 1000))
+                        : 0,
                 };
-
-                const next_arr = [...prev];
-                next_arr[idx] = next;
-                return next_arr;
+                return next;
             });
         };
 
         DIGIT_SYMBOLS.forEach((sym, i) => {
-            sockets[i].subscribe(sym.symbol, 100, {
-                onHistory: ({ prices }) => {
-                    for (const p of prices) buffers[i].push(p);
-                    updateMarket(i, prices[prices.length - 1] ?? null, 'open');
+            sockets[i].subscribe(sym.symbol, HISTORY_COUNT, GRANULARITY, {
+                onHistory: candles => {
+                    meta_ref.current[i].candles = candles;
+                    if (meta_ref.current[i].phase === 'loading') meta_ref.current[i].phase = 'analyzing';
+                    updateMarket(i, 'open');
                 },
-                onTick: tick => {
-                    buffers[i].push(tick.quote);
-                    updateMarket(i, tick.quote, 'open');
+                onUpdate: live_candle => {
+                    const arr = meta_ref.current[i].candles;
+                    if (arr.length === 0) {
+                        arr.push(live_candle);
+                    } else if (arr[arr.length - 1].epoch === live_candle.epoch) {
+                        // update existing live candle in place
+                        arr[arr.length - 1] = live_candle;
+                    } else {
+                        // new candle opened → previous one is now closed
+                        arr.push(live_candle);
+                    }
+                    updateMarket(i, 'open');
                 },
-                onStatusChange: status => updateMarket(i, null, status),
+                onStatusChange: status => updateMarket(i, status),
+                onError: () => updateMarket(i, 'closed'),
             });
         });
 
         return () => {
             for (const s of sockets) s.dispose();
             sockets_ref.current = [];
-            buffers_ref.current = [];
         };
     }, []);
 

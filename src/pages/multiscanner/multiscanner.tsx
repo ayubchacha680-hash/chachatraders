@@ -221,8 +221,8 @@ const MultiScanner = () => {
                 <div className='msc__header-left'>
                     <h2 className='msc__title'>📡 MultiScanner — 3-Min Signals</h2>
                     <p className='msc__subtitle'>
-                        All 12 Deriv volatility markets · 3-min OHLC candles · RSI · EMA Cross · MACD · Candlestick patterns
-                        · 10s entry countdown
+                        All 12 Deriv volatility markets · 1-min OHLC candles · EMA 9/21 slope · MACD cross · Named candlestick patterns
+                        · All 4 conditions must align · 10s entry countdown
                     </p>
                 </div>
             </div>
@@ -253,9 +253,9 @@ const MultiScanner = () => {
                             <th className='msc-th msc-th--market'>Market</th>
                             <th className='msc-th msc-th--signal'>3M Signal</th>
                             <th className='msc-th msc-th--strength'>Strength</th>
-                            <th className='msc-th msc-th--ind'>RSI(14)</th>
-                            <th className='msc-th msc-th--ind'>EMA 5/20</th>
-                            <th className='msc-th msc-th--ind'>MACD</th>
+                            <th className='msc-th msc-th--ind'>Trend Slope</th>
+                            <th className='msc-th msc-th--ind'>EMA 9/21</th>
+                            <th className='msc-th msc-th--ind'>MACD Cross</th>
                             <th className='msc-th msc-th--pattern'>Pattern</th>
                             <th className='msc-th msc-th--entry'>Entry Countdown</th>
                         </tr>

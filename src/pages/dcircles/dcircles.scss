@@ -153,10 +153,10 @@
         flex-shrink: 0;
     }
 
-    /* ── Blue triangle cursor ── */
+    /* ── Gold triangle cursor ── */
     &__triangle-wrap {
         position: absolute;
-        top: 0;
+        top: calc(3.2rem - 14px);
         left: 0;
         transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: none;
@@ -167,10 +167,10 @@
     &__triangle {
         width: 0;
         height: 0;
-        border-left: 12px solid transparent;
-        border-right: 12px solid transparent;
-        border-top: 20px solid #2979ff;
-        filter: drop-shadow(0 0 8px #2979ff) drop-shadow(0 0 16px #2979ff88);
+        border-left: 9px solid transparent;
+        border-right: 9px solid transparent;
+        border-top: 14px solid #FFD700;
+        filter: drop-shadow(0 0 6px #FFD700) drop-shadow(0 0 12px #FFD70099);
     }
 
     &__row {
@@ -211,16 +211,17 @@
         font-size: 1.55rem;
         font-weight: 900;
         line-height: 1;
-        color: #fff;
-        text-shadow: 0 1px 3px rgba(0 0 0 / 50%);
+        color: #000;
+        text-shadow: 0 1px 2px rgba(255 255 255 / 30%);
     }
 
     &__pct {
         font-size: 0.78rem;
         font-weight: 700;
-        color: rgba(255 255 255 / 90%);
+        color: #fff;
         line-height: 1;
         letter-spacing: -0.02em;
+        text-shadow: 0 1px 2px rgba(0 0 0 / 60%);
     }
 
     &__tick {

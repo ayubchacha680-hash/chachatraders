@@ -13,10 +13,10 @@ const CIRCLE_SIZE = 56;  // px – circle diameter
 
 /* ── Gradient colours per rank ─────────────────────────────────────────── */
 const COLOR_MAP: Record<string, { grad: string; glow: string }> = {
-    highest: { grad: 'radial-gradient(circle at 38% 32%, #4fe8a8 0%, #16c784 55%, #0b7a4f 100%)', glow: '#16c784' },
-    second:  { grad: 'radial-gradient(circle at 38% 32%, #64b9f9 0%, #2196f3 55%, #1050a0 100%)', glow: '#2196f3' },
-    lowest:  { grad: 'radial-gradient(circle at 38% 32%, #f07a77 0%, #e53935 55%, #8b1010 100%)', glow: '#e53935' },
-    second_l:{ grad: 'radial-gradient(circle at 38% 32%, #ffd063 0%, #ffb300 55%, #8a5c00 100%)', glow: '#ffb300' },
+    highest: { grad: 'radial-gradient(circle at 38% 32%, #66ff99 0%, #00cc00 55%, #005500 100%)', glow: '#00cc00' },
+    second:  { grad: 'radial-gradient(circle at 38% 32%, #66aaff 0%, #0066ff 55%, #003388 100%)', glow: '#0066ff' },
+    lowest:  { grad: 'radial-gradient(circle at 38% 32%, #ff6666 0%, #ff0000 55%, #880000 100%)', glow: '#ff0000' },
+    second_l:{ grad: 'radial-gradient(circle at 38% 32%, #ffee66 0%, #FFD700 55%, #886600 100%)', glow: '#FFD700' },
     normal:  { grad: 'radial-gradient(circle at 38% 32%, #b0b0b0 0%, #787878 55%, #3a3a3a 100%)', glow: '#888888' },
 };
 
@@ -221,7 +221,7 @@ const DCircles = () => {
                                     style={{
                                         background: grad,
                                         boxShadow: is_current
-                                            ? `0 0 0 3px #FFD700, 0 0 20px #FFD70088, 0 0 8px ${glow}99`
+                                            ? `0 0 20px ${glow}cc, 0 0 8px ${glow}`
                                             : `0 4px 14px ${glow}55, inset 0 1px 0 rgba(255,255,255,0.2)`,
                                     }}
                                 >

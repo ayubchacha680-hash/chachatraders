@@ -105,10 +105,11 @@ function detectPattern(candles: TCandle[]): { name: string; signal: TIndicatorSi
     if (cRange > 0 && cBody / cRange < 0.05)
         return { name: 'Doji ✝', signal: 'neutral' };
 
-    // Plain momentum bar
+    // Plain momentum bar — not a named pattern; treat as neutral so it doesn't
+    // inflate indicator agreement. Only named reversal/continuation patterns count.
     return {
         name: cBull ? 'Bullish Bar' : 'Bearish Bar',
-        signal: cBull ? 'rise' : 'fall',
+        signal: 'neutral',
     };
 }
 
@@ -117,6 +118,7 @@ function computeSignal(candles: TCandle[]): {
     signal: TIndicatorSignal;
     strength: number;
     indicators: TMarketIndicators;
+    last_closed_epoch: number;
 } {
     // Use only closed candles (drop the live/last one which is still forming)
     const closed = candles.length > 1 ? candles.slice(0, -1) : candles;
@@ -169,6 +171,7 @@ function computeSignal(candles: TCandle[]): {
         signal,
         strength,
         indicators: { rsi: rsi_sig, rsi_val, ema_cross, macd, candle_pattern, pattern_name },
+        last_closed_epoch: closed.length > 0 ? closed[closed.length - 1].epoch : 0,
     };
 }
 
@@ -186,6 +189,7 @@ type TMeta = {
     active_until: number;
     prev_signal: TIndicatorSignal;
     prev_strength: number;
+    last_trigger_epoch: number; // epoch of last closed candle that fired a signal
 };
 
 /* ── Hook ─────────────────────────────────────────────────────────────────── */
@@ -216,12 +220,13 @@ const useMultiScanner = () => {
     const sockets_ref = useRef<CandleSocket[]>([]);
     const meta_ref    = useRef<TMeta[]>(
         DIGIT_SYMBOLS.map(() => ({
-            candles:       [],
-            phase:         'loading' as TScanPhase,
-            countdown:     0,
-            active_until:  0,
-            prev_signal:   'neutral' as TIndicatorSignal,
-            prev_strength: 0,
+            candles:             [],
+            phase:               'loading' as TScanPhase,
+            countdown:           0,
+            active_until:        0,
+            prev_signal:         'neutral' as TIndicatorSignal,
+            prev_strength:       0,
+            last_trigger_epoch:  0,
         }))
     );
 
@@ -274,29 +279,28 @@ const useMultiScanner = () => {
                 return;
             }
 
-            const { signal, strength, indicators } = computeSignal(meta.candles);
+            const { signal, strength, indicators, last_closed_epoch } = computeSignal(meta.candles);
             const last_price = meta.candles[meta.candles.length - 1]?.close ?? null;
 
-            // Trigger 10-s countdown when signal fires strong (≥3) and we're idle
+            // Trigger 10-s countdown only when:
+            //   • we are idle (analyzing phase)
+            //   • signal is strong (≥3 of 4 indicators agree, plain bars excluded)
+            //   • a NEW candle has closed since the last time we fired a signal
+            //     → prevents the same closed-candle dataset re-firing the moment
+            //       the active window expires or on every subsequent tick
             if (
                 meta.phase === 'analyzing' &&
                 strength >= 3 &&
                 signal !== 'neutral' &&
-                (meta.prev_strength < 3 || signal !== meta.prev_signal)
+                last_closed_epoch > meta.last_trigger_epoch
             ) {
-                meta.phase     = 'countdown';
-                meta.countdown = COUNTDOWN_START;
+                meta.last_trigger_epoch = last_closed_epoch;
+                meta.phase              = 'countdown';
+                meta.countdown          = COUNTDOWN_START;
             }
 
-            // Direction flip during active window → reset
-            if (
-                meta.phase === 'active' &&
-                signal !== 'neutral' &&
-                meta.prev_signal !== 'neutral' &&
-                signal !== meta.prev_signal
-            ) {
-                meta.phase = 'analyzing';
-            }
+            // NOTE: direction-flip reset removed.  Once a signal is in countdown
+            // or active phase it runs to full completion — no early cancellation.
 
             meta.prev_signal   = signal;
             meta.prev_strength = strength;

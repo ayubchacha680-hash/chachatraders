@@ -203,7 +203,7 @@ const AppContent = observer(() => {
                 </Suspense>
             )}
             {is_loading ? (
-                <ChunkLoader message={localize('Starting CCTraders…')} />
+                <ChunkLoader message={localize('Starting ChachaTraders…')} />
             ) : (
                 <AuthLoadingWrapper>
                     <ThemeProvider theme={is_dark_mode_on ? 'dark' : 'light'}>

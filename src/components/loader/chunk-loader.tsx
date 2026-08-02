@@ -17,7 +17,6 @@ export default function ChunkLoader({ message }: { message: string }) {
 
             {/* Brand name */}
             <div className='cct-loader__brand'>
-                <span className='cct-loader__brand-main'>CCTraders</span>
                 <span className='cct-loader__brand-sub'>chachatraders</span>
             </div>
 

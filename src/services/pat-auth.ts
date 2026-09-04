@@ -14,8 +14,6 @@ export type TPATAuthResult =
     | { ok: true; account: TPATAccount }
     | { ok: false; error: string };
 
-const WS_URL = 'wss://ws.derivws.com/websockets/v3?app_id=1089';
-
 /** Authorizes a single PAT token via Deriv's WebSocket API and returns account info. */
 export const authorizePAT = (token: string): Promise<TPATAuthResult> => {
     return new Promise(resolve => {
@@ -26,8 +24,10 @@ export const authorizePAT = (token: string): Promise<TPATAuthResult> => {
         }, 12000);
 
         try {
-            // Use the standard Deriv WS endpoint with a public app_id for authorization
-            ws = new WebSocket(WS_URL);
+            // Use the same public DerivWS gateway as the rest of the app.
+            // The token is sent only over this WebSocket and is never placed in
+            // the URL or logged.
+            ws = new WebSocket(getPublicSocketURL());
         } catch {
             clearTimeout(timeout);
             resolve({ ok: false, error: 'Failed to open WebSocket connection.' });

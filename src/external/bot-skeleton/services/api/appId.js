@@ -132,7 +132,12 @@ export const V2GetActiveAccountId = () => {
 
 export const getToken = () => {
     const active_loginid = getLoginId();
-    const client_accounts = JSON.parse(localStorage.getItem('accountsList')) ?? undefined;
+    let client_accounts = {};
+    try {
+        client_accounts = JSON.parse(localStorage.getItem('accountsList') || '{}') || {};
+    } catch {
+        client_accounts = {};
+    }
     const active_account = (client_accounts && client_accounts[active_loginid]) || {};
     return {
         token: active_account ?? undefined,

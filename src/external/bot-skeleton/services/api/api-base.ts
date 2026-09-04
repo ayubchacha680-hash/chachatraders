@@ -19,7 +19,7 @@ import {
     setIsAuthorizing,
 } from './observables/connection-status-stream';
 import ApiHelpers from './api-helpers';
-import { generateDerivApiInstance, V2GetActiveAccountId } from './appId';
+import { generateDerivApiInstance, getToken, V2GetActiveAccountId } from './appId';
 import chart_api from './chart-api';
 
 type CurrentSubscription = {
@@ -173,6 +173,10 @@ class APIBase {
             }
 
             this.api = await generateDerivApiInstance();
+            // A newly-created public connection is not authorized yet. OAuth
+            // connections arrive pre-authenticated through their OTP URL, while
+            // PAT connections must authorize on this socket explicitly.
+            this.is_authorized = false;
 
             this.api?.connection.addEventListener('open', this.onsocketopen.bind(this));
             this.api?.connection.addEventListener('close', this.onsocketclose.bind(this));
@@ -259,6 +263,29 @@ class APIBase {
         setIsAuthorizing(true);
 
         try {
+            const storedAccount = getToken()?.token;
+            const token =
+                typeof storedAccount === 'string'
+                    ? storedAccount
+                    : storedAccount && typeof storedAccount === 'object'
+                      ? storedAccount.token
+                      : undefined;
+
+            // OAuth's OTP WebSocket is already authenticated. PAT accounts use
+            // the public gateway, so authorize that connection before balance
+            // and subscription requests are made.
+            if (token && !this.is_authorized) {
+                const authorization = await this.api.authorize(token);
+                if (authorization?.error) {
+                    const errorMessage = isBackendError(authorization.error)
+                        ? handleBackendError(authorization.error)
+                        : authorization.error?.message || 'Authorization failed';
+                    throw new Error(errorMessage);
+                }
+                this.token = token;
+                this.is_authorized = true;
+            }
+
             const { balance, error } = await this.api.balance();
 
             if (error) {
@@ -278,7 +305,7 @@ class APIBase {
                 currency: balance?.currency,
                 loginid: balance?.loginid,
             };
-            this.token = balance?.loginid;
+            this.token = token || this.token;
 
             const account_type = getAccountType(balance?.loginid);
             const currentAccount = balance?.loginid

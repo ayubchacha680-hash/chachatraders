@@ -197,6 +197,9 @@ const AppHeader = observer(() => {
                         <Button tertiary onClick={handleLogin}>
                             <Localize i18n_default_text='Log in' />
                         </Button>
+                        <Button secondary onClick={() => setIsApiDialogOpen(true)}>
+                            <Localize i18n_default_text='API token' />
+                        </Button>
                         <Button primary_light onClick={handleSignup}>
                             <Localize i18n_default_text='Sign up' />
                         </Button>

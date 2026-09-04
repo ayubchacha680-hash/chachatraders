@@ -35,7 +35,7 @@ const ApiConnectionDialog = ({ onClose }: TApiConnectionDialogProps) => {
         const result = await authorizePAT(trimmed);
         setLoading(false);
 
-        if (!result.ok) {
+        if (result.ok === false) {
             setError(result.error);
             return;
         }

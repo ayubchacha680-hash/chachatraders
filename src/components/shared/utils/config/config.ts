@@ -75,6 +75,21 @@ export const getSocketURL = async (): Promise<string> => {
     try {
         const authInfo = getAuthInfo();
         if (!authInfo || !authInfo.access_token) {
+            // PAT accounts are stored separately from OAuth auth_info. The
+            // authenticated OTP URL must be requested before opening the bot
+            // socket; the public socket cannot accept authorize(PAT).
+            const activeLoginId = localStorage.getItem('active_loginid');
+            if (activeLoginId) {
+                try {
+                    const accountsList = JSON.parse(localStorage.getItem('accountsList') || '{}');
+                    const patToken = accountsList?.[activeLoginId]?.token;
+                    if (typeof patToken === 'string' && patToken) {
+                        return await DerivWSAccountsService.fetchOTPWebSocketURL(patToken, activeLoginId);
+                    }
+                } catch {
+                    // Fall through to the public socket when no usable PAT is stored.
+                }
+            }
             return getDefaultServerURL();
         }
 

@@ -2,6 +2,7 @@
 /* [AI] - Analytics removed - utility functions moved to @/utils/account-helpers */
 import { getAccountId, getAccountType, isDemoAccount, removeUrlParameter } from '@/utils/account-helpers';
 /* [/AI] */
+import { getAuthInfo } from '@/external/deriv-core';
 import CommonStore from '@/stores/common-store';
 import { DerivWSAccountsService } from '@/services/derivws-accounts.service';
 import { TAuthData } from '@/types/api-types';
@@ -275,12 +276,19 @@ class APIBase {
             // the public gateway, so authorize that connection before balance
             // and subscription requests are made.
             if (token && !this.is_authorized) {
-                const authorization = await this.api.authorize(token);
-                if (authorization?.error) {
-                    const errorMessage = isBackendError(authorization.error)
-                        ? handleBackendError(authorization.error)
-                        : authorization.error?.message || 'Authorization failed';
-                    throw new Error(errorMessage);
+                // OAuth sockets are already authenticated through their OTP URL
+                // and legacy sessions may still require authorize(). PAT
+                // sockets are also already authenticated, but through the REST
+                // PAT -> OTP flow in getSocketURL(). Sending authorize(PAT) to
+                // the public endpoint makes valid PATs look invalid.
+                if (getAuthInfo()?.access_token) {
+                    const authorization = await this.api.authorize(token);
+                    if (authorization?.error) {
+                        const errorMessage = isBackendError(authorization.error)
+                            ? handleBackendError(authorization.error)
+                            : authorization.error?.message || 'Authorization failed';
+                        throw new Error(errorMessage);
+                    }
                 }
                 this.token = token;
                 this.is_authorized = true;

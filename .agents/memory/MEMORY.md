@@ -1,0 +1,1 @@
+- [Deriv PAT authentication](deriv-pat-authentication.md) — PATs use REST Bearer auth plus a one-time OTP WebSocket URL, not websocket authorize().

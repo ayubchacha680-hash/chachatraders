@@ -1,4 +1,4 @@
-import { getPublicSocketURL } from '@/components/shared';
+import { DerivWSAccountsService } from '@/services/derivws-accounts.service';
 
 export type TPATAccount = {
     loginid: string;
@@ -14,67 +14,54 @@ export type TPATAuthResult =
     | { ok: true; account: TPATAccount }
     | { ok: false; error: string };
 
-/** Authorizes a single PAT token via Deriv's WebSocket API and returns account info. */
-export const authorizePAT = (token: string): Promise<TPATAuthResult> => {
-    return new Promise(resolve => {
-        let ws: WebSocket | null = null;
-        const timeout = setTimeout(() => {
-            ws?.close();
-            resolve({ ok: false, error: 'Connection timed out. Check your token and try again.' });
-        }, 12000);
+/**
+ * Validates a PAT through Deriv's authenticated REST API.
+ *
+ * The v1 API does not accept PATs in an `authorize` message on the public
+ * WebSocket. REST validates the Bearer token and the bot later gets an
+ * authenticated, short-lived OTP WebSocket URL for the selected account.
+ */
+export const authorizePAT = async (token: string): Promise<TPATAuthResult> => {
+    try {
+        const accounts = await DerivWSAccountsService.fetchAccountsList(token);
+        const account = accounts?.[0];
 
-        try {
-            // Use the same public DerivWS gateway as the rest of the app.
-            // The token is sent only over this WebSocket and is never placed in
-            // the URL or logged.
-            ws = new WebSocket(getPublicSocketURL());
-        } catch {
-            clearTimeout(timeout);
-            resolve({ ok: false, error: 'Failed to open WebSocket connection.' });
-            return;
+        if (!account?.account_id) {
+            return { ok: false, error: 'This token is valid, but it has no trading account access.' };
         }
 
-        ws.onopen = () => {
-            ws!.send(JSON.stringify({ authorize: token, req_id: 1 }));
+        return {
+            ok: true,
+            account: {
+                loginid: account.account_id,
+                token,
+                currency: account.currency ?? 'USD',
+                balance: Number(account.balance) || 0,
+                is_virtual: account.account_type === 'demo',
+            },
         };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : '';
 
-        ws.onmessage = (event: MessageEvent) => {
-            try {
-                const data = JSON.parse(event.data as string);
-                clearTimeout(timeout);
-                ws!.close();
+        if (/401|unauthori[sz]ed|invalid token|invalid.*bearer/i.test(message)) {
+            return {
+                ok: false,
+                error: 'Deriv rejected this token. Check that it is a Personal Access Token with trading access and has not been revoked.',
+            };
+        }
 
-                if (data.error) {
-                    resolve({ ok: false, error: data.error.message ?? 'Authorization failed.' });
-                    return;
-                }
+        if (/403|app[- ]id|forbidden/i.test(message)) {
+            return {
+                ok: false,
+                error: 'Deriv rejected the app configuration. Please try again or contact the app owner.',
+            };
+        }
 
-                if (data.msg_type === 'authorize' && data.authorize) {
-                    const auth = data.authorize;
-                    resolve({
-                        ok: true,
-                        account: {
-                            loginid: auth.loginid,
-                            token,
-                            currency: auth.currency ?? 'USD',
-                            balance: auth.balance ?? 0,
-                            is_virtual: auth.is_virtual === 1,
-                            email: auth.email,
-                            fullname: auth.fullname,
-                        },
-                    });
-                }
-            } catch {
-                clearTimeout(timeout);
-                resolve({ ok: false, error: 'Unexpected response from server.' });
-            }
+        return {
+            ok: false,
+            error: 'Could not validate the token with Deriv. Check your connection and try again.',
         };
-
-        ws.onerror = () => {
-            clearTimeout(timeout);
-            resolve({ ok: false, error: 'WebSocket connection error.' });
-        };
-    });
+    }
 };
 
 const STORAGE_KEY = 'pat_accounts';

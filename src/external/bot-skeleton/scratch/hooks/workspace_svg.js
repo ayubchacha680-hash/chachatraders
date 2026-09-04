@@ -79,7 +79,8 @@ window.Blockly.WorkspaceSvg.prototype.centerOnBlock = function (id, hideChaff = 
 window.Blockly.WorkspaceSvg.prototype.lastAddedBlock = null;
 
 window.Blockly.WorkspaceSvg.prototype.addBlockNode = function (block_node) {
-    const { flyout } = DBotStore.instance;
+    const flyout = DBotStore.instance?.flyout;
+    if (!flyout) return;
     if (block_node) {
         const top_blocks = this.getTopBlocks(true);
         const block = window.Blockly.Xml.domToBlock(block_node, flyout.getFlyout().targetWorkspace);
@@ -141,6 +142,7 @@ window.Blockly.WorkspaceSvg.prototype.addBlockNode = function (block_node) {
  * the lowest hanging root-block.
  */
 window.Blockly.WorkspaceSvg.prototype.cleanUp = function (x = 0, y = 0, blocks_to_clean = []) {
+    const is_mobile = DBotStore.instance?.is_mobile ?? false;
     this.setResizesEnabled(false);
     window.Blockly.Events.setGroup(window.Blockly.Events.getGroup() || true);
 
@@ -173,7 +175,7 @@ window.Blockly.WorkspaceSvg.prototype.cleanUp = function (x = 0, y = 0, blocks_t
             const xy = block.getRelativeToSurfaceXY();
 
             const cursor_x = is_import ? x : -xy.x;
-            const cursor_y = original_cursor_y - (is_import ? 0 : xy.y) + (DBotStore.instance.is_mobile ? 50 : 0);
+            const cursor_y = original_cursor_y - (is_import ? 0 : xy.y) + (is_mobile ? 50 : 0);
 
             if (column_index === 0) {
                 block.moveBy(cursor_x, cursor_y);
@@ -351,12 +353,12 @@ window.Blockly.WorkspaceSvg.getTopLevelWorkspaceMetrics_ = function () {
  * Dispose of all blocks in workspace, with an optimization to prevent resizes.
  */
 window.Blockly.WorkspaceSvg.prototype.asyncClear = function () {
-    const { setLoading } = DBotStore.instance;
-    setLoading(true);
+    const setLoading = DBotStore.instance?.setLoading;
+    setLoading?.(true);
 
     return new Promise(resolve => {
         this.clear();
-        setLoading(false);
+        setLoading?.(false);
         resolve();
     });
 };

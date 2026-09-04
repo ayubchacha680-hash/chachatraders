@@ -82,7 +82,18 @@ export const getSocketURL = async (): Promise<string> => {
             if (activeLoginId) {
                 try {
                     const accountsList = JSON.parse(localStorage.getItem('accountsList') || '{}');
-                    const patToken = accountsList?.[activeLoginId]?.token;
+                    let patToken = accountsList?.[activeLoginId]?.token;
+
+                    // A PAT is shared by all accounts returned for that token.
+                    // The account switcher can select an account that was not
+                    // the first one saved by the connection dialog, so use the
+                    // stored PAT account list as a fallback.
+                    if (typeof patToken !== 'string' || !patToken) {
+                        const storedPATAccounts = JSON.parse(localStorage.getItem('pat_accounts') || '[]');
+                        patToken = storedPATAccounts.find((account: { token?: unknown }) => typeof account?.token === 'string')
+                            ?.token;
+                    }
+
                     if (typeof patToken === 'string' && patToken) {
                         return await DerivWSAccountsService.fetchOTPWebSocketURL(patToken, activeLoginId);
                     }

@@ -388,7 +388,21 @@ export default class ClientStore {
 
                 this.all_accounts_balance = null;
 
-                localStorage.removeItem('accountsList');
+                // OAuth account data can be rebuilt from auth_info. PAT
+                // accounts cannot: accountsList/pat_accounts contain the only
+                // local copy of the token needed to request the next OTP URL.
+                // Keep it during account switching so changing real/demo does
+                // not turn the user into a logged-out public session.
+                let hasStoredPAT = false;
+                try {
+                    const storedPATAccounts = JSON.parse(localStorage.getItem('pat_accounts') || '[]');
+                    hasStoredPAT = Array.isArray(storedPATAccounts) && storedPATAccounts.length > 0;
+                } catch {
+                    hasStoredPAT = false;
+                }
+                if (!hasStoredPAT) {
+                    localStorage.removeItem('accountsList');
+                }
                 localStorage.removeItem('authToken');
                 localStorage.removeItem('clientAccounts');
                 localStorage.removeItem('account_type'); // Clear account type on logout

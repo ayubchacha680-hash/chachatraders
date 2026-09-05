@@ -4,7 +4,6 @@ import { ToastContainer } from 'react-toastify';
 import AuthLoadingWrapper from '@/components/auth-loading-wrapper';
 import { botNotification } from '@/components/bot-notification/bot-notification';
 import useLiveChat from '@/components/chat/useLiveChat';
-import ChunkLoader from '@/components/loader/chunk-loader';
 import { getUrlBase } from '@/components/shared';
 import TransactionDetailsModal from '@/components/transaction-details';
 import { api_base, ApiHelpers, ServerTime } from '@/external/bot-skeleton';
@@ -35,7 +34,6 @@ const PreviewBranding =
 
 const AppContent = observer(() => {
     const [is_api_initialized, setIsApiInitialized] = React.useState(false);
-    const [is_loading, setIsLoading] = React.useState(true);
 
     const store = useStore();
     const { app, transactions, common, client } = store;
@@ -144,16 +142,7 @@ const AppContent = observer(() => {
         const retrieveActiveSymbols = () => {
             const { active_symbols } = ApiHelpers.instance;
 
-            // Safety-net: never block the UI more than 6 s waiting for symbols
-            const safety_timeout = setTimeout(() => setIsLoading(false), 6000);
-
-            active_symbols.retrieveActiveSymbols(true).then(() => {
-                clearTimeout(safety_timeout);
-                setIsLoading(false);
-            }).catch(() => {
-                clearTimeout(safety_timeout);
-                setIsLoading(false);
-            });
+            active_symbols.retrieveActiveSymbols(true).catch(() => {});
         };
 
         if (ApiHelpers?.instance?.active_symbols) {
@@ -177,7 +166,6 @@ const AppContent = observer(() => {
     React.useEffect(() => {
         if (is_api_initialized) {
             init();
-            setIsLoading(true);
             if (!client.is_logged_in) {
                 changeActiveSymbolLoadingState();
             }
@@ -201,22 +189,18 @@ const AppContent = observer(() => {
                     <PreviewBranding />
                 </Suspense>
             )}
-            {is_loading ? (
-                <ChunkLoader message={localize('Starting AlphaTraders…')} />
-            ) : (
-                <AuthLoadingWrapper>
-                    <ThemeProvider theme={is_dark_mode_on ? 'dark' : 'light'}>
-                        <div className='bot-dashboard bot' data-testid='dt_bot_dashboard'>
-                            <Audio />
-                            <Main />
-                            <BotBuilder />
-                            <BotStopped />
-                            <TransactionDetailsModal />
-                            <ToastContainer limit={3} draggable={false} />
-                        </div>
-                    </ThemeProvider>
-                </AuthLoadingWrapper>
-            )}
+            <AuthLoadingWrapper>
+                <ThemeProvider theme={is_dark_mode_on ? 'dark' : 'light'}>
+                    <div className='bot-dashboard bot' data-testid='dt_bot_dashboard'>
+                        <Audio />
+                        <Main />
+                        <BotBuilder />
+                        <BotStopped />
+                        <TransactionDetailsModal />
+                        <ToastContainer limit={3} draggable={false} />
+                    </div>
+                </ThemeProvider>
+            </AuthLoadingWrapper>
         </React.Fragment>
     );
 });

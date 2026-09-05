@@ -44,6 +44,12 @@
         border: none;
         max-width: 100%;
         width: 100%;
+        transition: width 0.25s ease, margin-inline-end 0.25s ease;
+
+        &--run-panel-space {
+            width: calc(100% - 36.6rem);
+            margin-inline-end: 36.6rem;
+        }
 
         &.no-scroll {
             overflow: hidden;
@@ -199,6 +205,12 @@
             &__container {
                 background-color: var(--general-main-1);
             }
+        }
+    }
+
+    &--run-panel-space {
+        .main__run-strategy-wrapper {
+            inset-inline-end: calc(36.6rem + 1.6rem);
         }
     }
 

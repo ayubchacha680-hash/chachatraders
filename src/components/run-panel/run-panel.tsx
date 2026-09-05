@@ -255,6 +255,7 @@ const RunPanel = observer(() => {
     const {
         active_index,
         is_drawer_open,
+        is_running,
         is_statistics_info_modal_open,
         is_clear_stat_disabled,
         onClearStatClick,
@@ -268,7 +269,8 @@ const RunPanel = observer(() => {
     const { statistics } = transactions;
     const { active_tour, active_tab } = dashboard;
     const { total_payout, total_profit, total_stake, won_contracts, lost_contracts, number_of_runs } = statistics;
-    const { BOT_BUILDER, CHART } = DBOT_TABS;
+    const { BOT_BUILDER, CHART, MULTISCANNER, ANALYSIS, DCIRCLES } = DBOT_TABS;
+    const has_persistent_run_panel = [MULTISCANNER, ANALYSIS, DCIRCLES].includes(active_tab);
 
     React.useEffect(() => {
         onMount();
@@ -281,6 +283,12 @@ const RunPanel = observer(() => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    React.useEffect(() => {
+        if (isDesktop && has_persistent_run_panel && !is_running) {
+            setActiveTabIndex(1);
+        }
+    }, [has_persistent_run_panel, isDesktop, is_running, setActiveTabIndex]);
 
     const content = (
         <DrawerContent
@@ -311,7 +319,7 @@ const RunPanel = observer(() => {
         />
     );
 
-    const show_run_panel = [BOT_BUILDER, CHART].includes(active_tab) || active_tour;
+    const show_run_panel = [BOT_BUILDER, CHART, MULTISCANNER, ANALYSIS, DCIRCLES].includes(active_tab) || active_tour;
     if ((!show_run_panel && isDesktop) || active_tour === 'bot_builder') return null;
 
     return (
@@ -321,6 +329,7 @@ const RunPanel = observer(() => {
                     anchor='right'
                     className={classNames('run-panel', {
                         'run-panel__container': isDesktop,
+                        'run-panel__container--workspace': isDesktop && has_persistent_run_panel,
                         'run-panel__container--tour-active': isDesktop && active_tour,
                     })}
                     contentClassName='run-panel__content'

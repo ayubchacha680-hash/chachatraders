@@ -12,6 +12,10 @@
         width: 36.6rem !important;
         right: 0;
 
+        &--workspace {
+            box-shadow: -0.8rem 0 2.4rem rgb(0 0 0 / 18%);
+        }
+
         &--mobile {
             position: absolute;
             top: 0;

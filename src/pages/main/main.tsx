@@ -3,7 +3,6 @@ import React, { lazy, Suspense, useEffect, useState } from 'react';
 import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { useLocation, useNavigate } from 'react-router-dom';
-import ChunkLoader from '@/components/loader/chunk-loader';
 import { generateOAuthURL } from '@/components/shared';
 import DesktopWrapper from '@/components/shared_ui/desktop-wrapper';
 import Dialog from '@/components/shared_ui/dialog';
@@ -53,11 +52,16 @@ const Analysis       = lazy(() => import('../analysis'));
 const FreeBots       = lazy(() => import('../free-bots'));
 const DCircles       = lazy(() => import('../dcircles'));
 
+const PERSISTENT_RUN_PANEL_TABS = [DBOT_TABS.MULTISCANNER, DBOT_TABS.ANALYSIS, DBOT_TABS.DCIRCLES];
 
 /* ── Ultra-fast Run/Stop floating button ─────────────────────────────────── */
 const RunFab = observer(() => {
-    const { run_panel } = useStore();
+    const { dashboard, run_panel } = useStore();
     const is_running = run_panel?.is_running ?? false;
+    const is_compact_workspace =
+        useDevice().isDesktop &&
+        run_panel?.is_drawer_open &&
+        PERSISTENT_RUN_PANEL_TABS.includes(dashboard?.active_tab);
 
     const handleToggle = () => {
         // Click the existing run/stop button so all side-effects fire correctly
@@ -78,6 +82,7 @@ const RunFab = observer(() => {
     return (
         <button
             className={classNames('run-fab', { 'run-fab--running': is_running })}
+            data-compact-workspace={is_compact_workspace || undefined}
             onClick={handleToggle}
             title={is_running ? localize('Stop Bot') : localize('Run Bot')}
             aria-label={is_running ? localize('Stop Bot') : localize('Run Bot')}
@@ -125,6 +130,8 @@ const AppWrapper = observer(() => {
     const init_render = React.useRef(true);
     const hash = ['dashboard', 'bot_builder', 'chart', 'tutorial', 'multiscanner', 'analysis', 'free_bots', 'dcircles'];
     const { isDesktop } = useDevice();
+    const has_persistent_run_panel = PERSISTENT_RUN_PANEL_TABS.includes(active_tab);
+    const is_compact_workspace = isDesktop && is_drawer_open && has_persistent_run_panel;
     const location = useLocation();
     const navigate = useNavigate();
     const [left_tab_shadow, setLeftTabShadow]   = useState<boolean>(false);
@@ -315,9 +322,10 @@ const AppWrapper = observer(() => {
 
     return (
         <React.Fragment>
-            <div className='main'>
+            <div className={classNames('main', { 'main--run-panel-space': is_compact_workspace })}>
                 <div
                     className={classNames('main__container', {
+                        'main__container--run-panel-space': is_compact_workspace,
                         'main__container--active': active_tour && active_tab === DASHBOARD && !isDesktop,
                     })}
                 >
@@ -359,7 +367,7 @@ const AppWrapper = observer(() => {
                                 }
                                 id={is_chart_modal_visible || is_trading_view_modal_visible ? 'id-charts--disabled' : 'id-charts'}
                             >
-                                <Suspense fallback={<ChunkLoader message={localize('Please wait, loading chart...')} />}>
+                                <Suspense fallback={null}>
                                     <ChartWrapper show_digits_stats={false} />
                                 </Suspense>
                             </div>
@@ -375,7 +383,7 @@ const AppWrapper = observer(() => {
                                 id='id-tutorials'
                             >
                                 <div className='tutorials-wrapper'>
-                                    <Suspense fallback={<ChunkLoader message={localize('Please wait, loading tutorials...')} />}>
+                                    <Suspense fallback={null}>
                                         <Tutorial handleTabChange={handleTabChange} />
                                     </Suspense>
                                 </div>
@@ -391,7 +399,7 @@ const AppWrapper = observer(() => {
                                 }
                                 id='id-multiscanner'
                             >
-                                <Suspense fallback={<ChunkLoader message={localize('Please wait, loading scanner...')} />}>
+                                <Suspense fallback={null}>
                                     <MultiScanner />
                                 </Suspense>
                             </div>
@@ -406,7 +414,7 @@ const AppWrapper = observer(() => {
                                 }
                                 id='id-analysis'
                             >
-                                <Suspense fallback={<ChunkLoader message={localize('Please wait, loading analysis...')} />}>
+                                <Suspense fallback={null}>
                                     <Analysis />
                                 </Suspense>
                             </div>
@@ -421,7 +429,7 @@ const AppWrapper = observer(() => {
                                 }
                                 id='id-free-bots'
                             >
-                                <Suspense fallback={<ChunkLoader message={localize('Please wait, loading bots...')} />}>
+                                <Suspense fallback={null}>
                                     <FreeBots />
                                 </Suspense>
                             </div>
@@ -436,7 +444,7 @@ const AppWrapper = observer(() => {
                                 }
                                 id='id-dcircles'
                             >
-                                <Suspense fallback={<ChunkLoader message={localize('Please wait, loading circles...')} />}>
+                                <Suspense fallback={null}>
                                     <DCircles />
                                 </Suspense>
                             </div>

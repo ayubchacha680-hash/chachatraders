@@ -1,5 +1,5 @@
 {
-    "brand_name": "YourBrand",
+    "brand_name": "AlphaTraders",
     "brand_domain": "yourbrand.com",
     "brand_hostname": {
         "staging": "staging.yourbrand.com/dashboard",
@@ -79,7 +79,7 @@
         "css_variable_prefix": "--brand"
     },
     "platform": {
-        "name": "CCTraders",
+        "name": "AlphaTraders",
         "footer": {
             "enable_language_settings": false,
             "enable_theme_toggle": true

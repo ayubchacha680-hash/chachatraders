@@ -10,14 +10,14 @@ export default function ChunkLoader({ message }: { message: string }) {
                 <div className='cct-loader__ring cct-loader__ring--3' />
                 {/* Core logo */}
                 <div className='cct-loader__core'>
-                    <span className='cct-loader__cc'>CC</span>
+                    <span className='cct-loader__cc'>A</span>
                     <span className='cct-loader__t'>T</span>
                 </div>
             </div>
 
             {/* Brand name */}
             <div className='cct-loader__brand'>
-                <span className='cct-loader__brand-sub'>chachatraders</span>
+                <span className='cct-loader__brand-sub'>alphatraders</span>
             </div>
 
             {/* Message */}

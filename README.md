@@ -17,7 +17,7 @@ execution, and dashboard/tutorials.
 
 1. Log in to your Deriv account and go to the [API Token page](https://app.deriv.com/account/api-token) to create a token with the required scopes.
 2. Navigate to [App Registration](https://developers.deriv.com/dashboard/) and register a new application.
-3. Set the **Redirect URI** to the URL where you will host this app (e.g. `http://localhost:4003` for local development).
+3. Set the **Redirect URI** to the URL where you will host this app (e.g. `http://localhost:5000` for local development).
 4. Copy the **App ID** shown after registration — you will need it in the next step.
 
 ## Step 2: Configure `.env`
@@ -59,7 +59,7 @@ npm install
 npm run dev
 ```
 
-The app is available at `http://localhost:4003`. (`npm install` and `npm run dev`
+The app is available at `http://localhost:5000`. (`npm install` and `npm run dev`
 also regenerate brand CSS — see Branding below.)
 
 ## Step 4: Build for Production

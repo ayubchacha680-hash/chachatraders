@@ -11,23 +11,24 @@ let purchase_reference;
 export default Engine =>
     class Purchase extends Engine {
         purchaseFreeBot(contract_type, prediction) {
-            const original_trade_options = this.tradeOptions;
-            this.tradeOptions = { ...original_trade_options };
+            const trade_options = { ...this.tradeOptions };
             if (['DIGITEVEN', 'DIGITODD'].includes(contract_type)) {
-                delete this.tradeOptions.prediction;
+                delete trade_options.prediction;
             } else {
-                this.tradeOptions.prediction = prediction;
+                trade_options.prediction = prediction;
             }
-            const purchase = this.purchase(contract_type);
-            this.tradeOptions = original_trade_options;
-            return purchase;
+            // Cycle bots change contract families and barriers at runtime, so
+            // stale pre-subscribed proposals cannot be reused safely.
+            return this.purchase(contract_type, trade_options);
         }
 
-        purchase(contract_type) {
+        purchase(contract_type, trade_options = this.tradeOptions) {
             // Prevent calling purchase twice
             if (this.store.getState().scope !== BEFORE_PURCHASE) {
                 return Promise.resolve();
             }
+            const use_subscribed_proposal =
+                trade_options === this.tradeOptions && this.is_proposal_subscription_required;
 
             const onSuccess = response => {
                 // Don't unnecessarily send a forget request for a purchased contract.
@@ -42,7 +43,7 @@ export default Engine =>
                 this.contractId = buy.contract_id;
                 this.store.dispatch(purchaseSuccessful());
 
-                if (this.is_proposal_subscription_required) {
+                if (use_subscribed_proposal) {
                     this.renewProposalsOnPurchase();
                 }
 
@@ -57,7 +58,7 @@ export default Engine =>
                 });
             };
 
-            if (this.is_proposal_subscription_required) {
+            if (use_subscribed_proposal) {
                 const { id, askPrice } = this.selectProposal(contract_type);
 
                 const action = () => api_base.api.send({ buy: id, price: askPrice });
@@ -95,14 +96,14 @@ export default Engine =>
                     delayIndex++
                 ).then(onSuccess);
             }
-            const trade_option = tradeOptionToBuy(contract_type, this.tradeOptions);
+            const trade_option = tradeOptionToBuy(contract_type, trade_options);
             const action = () => api_base.api.send(trade_option);
 
             this.isSold = false;
 
             contractStatus({
                 id: 'contract.purchase_sent',
-                data: this.tradeOptions.amount,
+                    data: trade_options.amount,
             });
 
             if (!this.options.timeMachineEnabled) {

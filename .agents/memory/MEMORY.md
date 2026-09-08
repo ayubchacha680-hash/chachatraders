@@ -2,3 +2,4 @@
 - [Loading and browser bundles](loading-and-browser-bundles.md) — keep full-screen loaders to app boot; tab fallbacks must not block the workspace, and browser bundles avoid react-dom/server.
 - [Blockly startup ordering](blockly-startup-ordering.md) — workspace startup must tolerate API engine stores arriving after React mounts the Bot Builder host.
 - [Programmatic Blockly imports](programmatic-blockly-imports.md) — library bots use compatibility conversion and async workspace loading without file-import history side effects.
+- [Dynamic cycle purchases](dynamic-cycle-purchases.md) — runtime-switching digit contracts must use guarded direct buys, not stale family-specific proposal subscriptions.

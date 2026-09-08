@@ -38,6 +38,9 @@ window.Blockly.Blocks.free_bot_purchase = {
 };
 
 window.Blockly.JavaScript.javascriptGenerator.forBlock.free_bot_purchase = block => {
+    if (!block?.getFieldValue) {
+        throw new Error('Free bot purchase block is unavailable during code generation.');
+    }
     const prediction =
         window.Blockly.JavaScript.javascriptGenerator.valueToCode(
             block,

@@ -168,12 +168,24 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.trade_definition = block 
 
     const { loginid } = client;
     const account = loginid;
-    const market_block = block.getChildByType('trade_definition_market');
-    const trade_type_block = block.getChildByType('trade_definition_tradetype');
-    const contract_type_block = block.getChildByType('trade_definition_contracttype');
-    const candle_interval_block = block.getChildByType('trade_definition_candleinterval');
-    const restart_on_error_block = block.getChildByType('trade_definition_restartonerror');
-    const restart_on_buy_sell_block = block.getChildByType('trade_definition_restartbuysell');
+    const descendants = block.getDescendants(false);
+    const getChild = type =>
+        block.getChildByType(type) || descendants.find(descendant => descendant.type === type);
+    const market_block = getChild('trade_definition_market');
+    const trade_type_block = getChild('trade_definition_tradetype');
+    const contract_type_block = getChild('trade_definition_contracttype');
+    const candle_interval_block = getChild('trade_definition_candleinterval');
+    const restart_on_error_block = getChild('trade_definition_restartonerror');
+    const restart_on_buy_sell_block = getChild('trade_definition_restartbuysell');
+    const missing_block = [
+        ['market', market_block],
+        ['trade type', trade_type_block],
+        ['contract type', contract_type_block],
+        ['candle interval', candle_interval_block],
+    ].find(([, child]) => !child);
+    if (missing_block) {
+        throw new Error(`Trade parameters are missing the ${missing_block[0]} block.`);
+    }
 
     const symbol = market_block.getFieldValue('SYMBOL_LIST');
     const trade_type = trade_type_block.getFieldValue('TRADETYPE_LIST');

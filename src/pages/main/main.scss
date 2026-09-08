@@ -179,6 +179,15 @@
                     }
                 }
             }
+
+            li#id-free-bots.dc-tabs__active {
+                background: #1f9d55;
+                color: #fff;
+
+                span {
+                    color: inherit;
+                }
+            }
         }
     }
 

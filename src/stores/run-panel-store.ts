@@ -4,6 +4,7 @@ import { botNotification } from '@/components/bot-notification/bot-notification'
 import { notification_message } from '@/components/bot-notification/bot-notification-utils';
 import { generateOAuthURL, isSafari, mobileOSDetect, standalone_routes } from '@/components/shared';
 import { contract_stages, TContractStage } from '@/constants/contract-stage';
+import { isFastModeEnabled, setFastModeEnabled } from '@/constants/fast-mode';
 import { run_panel } from '@/constants/run-panel';
 import { ErrorTypes, MessageTypes, observer, unrecoverable_errors } from '@/external/bot-skeleton';
 import { getSelectedTradeType } from '@/external/bot-skeleton/scratch/utils';
@@ -39,6 +40,7 @@ export default class RunPanelStore {
             dialog_options: observable,
             has_open_contract: observable,
             is_running: observable,
+            is_fast_mode: observable,
             is_statistics_info_modal_open: observable,
             is_drawer_open: observable,
             is_dialog_open: observable,
@@ -54,6 +56,7 @@ export default class RunPanelStore {
             setContractStage: action,
             setHasOpenContract: action,
             setIsRunning: action,
+            toggleFastMode: action,
             onRunButtonClick: action,
             is_contract_buying_in_progress: observable,
             SetpurchaseInProgress: action,
@@ -103,6 +106,7 @@ export default class RunPanelStore {
     dialog_options = {};
     has_open_contract = false;
     is_running = false;
+    is_fast_mode = isFastModeEnabled();
     is_statistics_info_modal_open = false;
     is_drawer_open = true;
     is_dialog_open = false;
@@ -761,6 +765,11 @@ export default class RunPanelStore {
 
     setIsRunning = (is_running: boolean) => {
         this.is_running = is_running;
+    };
+
+    toggleFastMode = () => {
+        this.is_fast_mode = !this.is_fast_mode;
+        setFastModeEnabled(this.is_fast_mode);
     };
 
     onMount = () => {

@@ -14,6 +14,7 @@ import Button from '../shared_ui/button';
 import Tooltip from '../shared_ui/tooltip/tooltip';
 import CircularWrapper from './circular-wrapper';
 import ContractStageText from './contract-stage-text';
+import FastModeToggle from './fast-mode-toggle';
 import './run-panel-tooltip.scss';
 
 type TTradeAnimation = {
@@ -28,8 +29,15 @@ const TradeAnimation = observer(({ className, should_show_overlay }: TTradeAnima
     const { isMobile } = useDevice();
 
     const { is_contract_completed, profit } = summary_card;
-    const { contract_stage, is_stop_button_visible, is_stop_button_disabled, onRunButtonClick, onStopBotClick } =
-        run_panel;
+    const {
+        contract_stage,
+        is_fast_mode,
+        is_stop_button_visible,
+        is_stop_button_disabled,
+        onRunButtonClick,
+        onStopBotClick,
+        toggleFastMode,
+    } = run_panel;
     const [shouldDisable, setShouldDisable] = React.useState(false);
     const is_unavailable_for_payment_agent = false;
 
@@ -130,7 +138,6 @@ const TradeAnimation = observer(({ className, should_show_overlay }: TTradeAnima
         };
     }, [is_stop_button_visible, is_stop_button_disabled]);
     const show_overlay = should_show_overlay && is_contract_completed;
-
     // Fix TypeScript error by ensuring active_tab is a number
     // Use a fallback to dashboard if active_tab is undefined
     const safeActiveTab = typeof active_tab === 'number' ? active_tab : DBOT_TABS.DASHBOARD;
@@ -166,56 +173,59 @@ const TradeAnimation = observer(({ className, should_show_overlay }: TTradeAnima
 
     return (
         <div className={classNames('animation__wrapper', className)}>
-            {should_show_tooltip ? (
-                <div className='run__button_wrapper'>
-                    <Tooltip
-                        alignment={determineTooltipAlignment()}
-                        message={localize('The Run button is disabled because no Bot has been created yet.')}
-                        icon='info'
-                        className='qs__tooltip'
-                    />
-                    <div style={{ opacity: 0.5, marginLeft: '8px' }}>
-                        <Button
-                            is_disabled={true}
-                            className={button_props.class}
-                            id={button_props.id}
-                            icon={button_props.icon}
-                            onClick={() => {
-                                // Disabled button, no action
-                            }}
-                            has_effect
-                            {...(is_stop_button_visible || !is_unavailable_for_payment_agent
-                                ? { primary: true }
-                                : { green: true })}
-                        >
-                            {button_props.text}
-                        </Button>
+            <div className='animation__controls'>
+                {should_show_tooltip ? (
+                    <div className='run__button_wrapper'>
+                        <Tooltip
+                            alignment={determineTooltipAlignment()}
+                            message={localize('The Run button is disabled because no Bot has been created yet.')}
+                            icon='info'
+                            className='qs__tooltip'
+                        />
+                        <div style={{ opacity: 0.5, marginLeft: '8px' }}>
+                            <Button
+                                is_disabled={true}
+                                className={button_props.class}
+                                id={button_props.id}
+                                icon={button_props.icon}
+                                onClick={() => {
+                                    // Disabled button, no action
+                                }}
+                                has_effect
+                                {...(is_stop_button_visible || !is_unavailable_for_payment_agent
+                                    ? { primary: true }
+                                    : { green: true })}
+                            >
+                                {button_props.text}
+                            </Button>
+                        </div>
                     </div>
-                </div>
-            ) : (
-                <Button
-                    is_disabled={(is_disabled && !is_unavailable_for_payment_agent) || contract_stage === 3}
-                    className={button_props.class}
-                    id={button_props.id}
-                    icon={button_props.icon}
-                    onClick={() => {
-                        setShouldDisable(true);
-                        if (is_stop_button_visible) {
-                            onStopBotClick();
-                            return;
-                        }
-                        onRunButtonClick();
-                        /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
-                        /* [/AI] */
-                    }}
-                    has_effect
-                    {...(is_stop_button_visible || !is_unavailable_for_payment_agent
-                        ? { primary: true }
-                        : { green: true })}
-                >
-                    {button_props.text}
-                </Button>
-            )}
+                ) : (
+                    <Button
+                        is_disabled={(is_disabled && !is_unavailable_for_payment_agent) || contract_stage === 3}
+                        className={button_props.class}
+                        id={button_props.id}
+                        icon={button_props.icon}
+                        onClick={() => {
+                            setShouldDisable(true);
+                            if (is_stop_button_visible) {
+                                onStopBotClick();
+                                return;
+                            }
+                            onRunButtonClick();
+                            /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
+                            /* [/AI] */
+                        }}
+                        has_effect
+                        {...(is_stop_button_visible || !is_unavailable_for_payment_agent
+                            ? { primary: true }
+                            : { green: true })}
+                    >
+                        {button_props.text}
+                    </Button>
+                )}
+                <FastModeToggle is_enabled={is_fast_mode} onToggle={toggleFastMode} />
+            </div>
             <div
                 className={classNames('animation__container', className, {
                     'animation--running': contract_stage > 0,

@@ -348,7 +348,7 @@ class DBot {
                 BinaryBotPrivateTickAnalysis();
                 BinaryBotPrivateRun(BinaryBotPrivateStart);
                 if (!BinaryBotPrivateHasCalledTradeOptions) {
-                    sleep(1);
+                    sleep(Bot.getTradeOptionsPollingDelay());
                     continue;
                 }
                 while (watch('before')) {

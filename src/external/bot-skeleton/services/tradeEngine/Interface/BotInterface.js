@@ -1,4 +1,5 @@
 import { observer as globalObserver } from '../../../utils/observer';
+import { getTradeOptionsPollingDelay } from '@/constants/fast-mode';
 import { createDetails } from '../utils/helpers';
 
 const getBotInterface = tradeEngine => {
@@ -12,6 +13,7 @@ const getBotInterface = tradeEngine => {
         getAskPrice: contract_type => Number(getProposal(contract_type, tradeEngine).ask_price),
         getPayout: contract_type => Number(getProposal(contract_type, tradeEngine).payout),
         getPurchaseReference: () => tradeEngine.getPurchaseReference(),
+        getTradeOptionsPollingDelay,
         isSellAvailable: () => tradeEngine.isSellAtMarketAvailable(),
         sellAtMarket: () => tradeEngine.sellAtMarket(),
         getSellPrice: () => getSellPrice(tradeEngine),

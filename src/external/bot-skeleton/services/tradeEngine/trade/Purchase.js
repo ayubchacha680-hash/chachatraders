@@ -10,6 +10,19 @@ let purchase_reference;
 
 export default Engine =>
     class Purchase extends Engine {
+        purchaseFreeBot(contract_type, prediction) {
+            const original_trade_options = this.tradeOptions;
+            this.tradeOptions = { ...original_trade_options };
+            if (['DIGITEVEN', 'DIGITODD'].includes(contract_type)) {
+                delete this.tradeOptions.prediction;
+            } else {
+                this.tradeOptions.prediction = prediction;
+            }
+            const purchase = this.purchase(contract_type);
+            this.tradeOptions = original_trade_options;
+            return purchase;
+        }
+
         purchase(contract_type) {
             // Prevent calling purchase twice
             if (this.store.getState().scope !== BEFORE_PURCHASE) {

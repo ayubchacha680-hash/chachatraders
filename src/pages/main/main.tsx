@@ -128,7 +128,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'chart', 'tutorial', 'multiscanner', 'analysis', 'free_bots', 'dcircles'];
+    const hash = ['dashboard', 'bot_builder', 'free_bots', 'chart', 'tutorial', 'multiscanner', 'analysis', 'dcircles'];
     const { isDesktop } = useDevice();
     const has_persistent_run_panel = PERSISTENT_RUN_PANEL_TABS.includes(active_tab);
     const is_compact_workspace = isDesktop && is_drawer_open && has_persistent_run_panel;
@@ -357,7 +357,22 @@ const AppWrapper = observer(() => {
                                 id='id-bot-builder'
                             />
 
-                            {/* 2 – Charts */}
+                            {/* 2 – Free Bots */}
+                            <div
+                                label={
+                                    <>
+                                        <span style={{ fontSize: '1.6rem', lineHeight: '1' }}>🤖</span>
+                                        <Localize i18n_default_text='Free Bots' />
+                                    </>
+                                }
+                                id='id-free-bots'
+                            >
+                                <Suspense fallback={null}>
+                                    <FreeBots />
+                                </Suspense>
+                            </div>
+
+                            {/* 3 – Charts */}
                             <div
                                 label={
                                     <>
@@ -372,7 +387,7 @@ const AppWrapper = observer(() => {
                                 </Suspense>
                             </div>
 
-                            {/* 3 – Tutorials */}
+                            {/* 4 – Tutorials */}
                             <div
                                 label={
                                     <>
@@ -389,7 +404,7 @@ const AppWrapper = observer(() => {
                                 </div>
                             </div>
 
-                            {/* 4 – MultiScanner */}
+                            {/* 5 – MultiScanner */}
                             <div
                                 label={
                                     <>
@@ -404,7 +419,7 @@ const AppWrapper = observer(() => {
                                 </Suspense>
                             </div>
 
-                            {/* 5 – Analysis */}
+                            {/* 6 – Analysis */}
                             <div
                                 label={
                                     <>
@@ -419,22 +434,7 @@ const AppWrapper = observer(() => {
                                 </Suspense>
                             </div>
 
-                            {/* 5 – Free Bots */}
-                            <div
-                                label={
-                                    <>
-                                        <span style={{ fontSize: '1.6rem', lineHeight: '1' }}>🤖</span>
-                                        <Localize i18n_default_text='Free Bots' />
-                                    </>
-                                }
-                                id='id-free-bots'
-                            >
-                                <Suspense fallback={null}>
-                                    <FreeBots />
-                                </Suspense>
-                            </div>
-
-                            {/* 6 – DCircles */}
+                            {/* 7 – DCircles */}
                             <div
                                 label={
                                     <>

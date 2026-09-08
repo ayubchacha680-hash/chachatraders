@@ -1,2 +1,4 @@
 - [Deriv PAT authentication](deriv-pat-authentication.md) — PATs use REST Bearer auth plus a one-time OTP WebSocket URL, not websocket authorize().
 - [Loading and browser bundles](loading-and-browser-bundles.md) — keep full-screen loaders to app boot; tab fallbacks must not block the workspace, and browser bundles avoid react-dom/server.
+- [Blockly startup ordering](blockly-startup-ordering.md) — workspace startup must tolerate API engine stores arriving after React mounts the Bot Builder host.
+- [Programmatic Blockly imports](programmatic-blockly-imports.md) — library bots use compatibility conversion and async workspace loading without file-import history side effects.

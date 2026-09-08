@@ -57,6 +57,12 @@ export default class AppStore {
         if (!this.dbot_store) return;
 
         blockly_store.setLoading(true);
+        // App content and the Blockly engine initialize independently. Wait for
+        // the Bot Builder host element so DBot.initWorkspace cannot return from
+        // an unresolved promise when React has not mounted #scratch_div yet.
+        for (let attempt = 0; attempt < 40 && !document.getElementById('scratch_div'); attempt++) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
         await DBot.initWorkspace('/', this.dbot_store, this.api_helpers_store, ui.is_mobile, false);
 
         blockly_store.setContainerSize();
@@ -201,6 +207,12 @@ export default class AppStore {
             server_time: this.core.common.server_time,
             ws: api_base.api,
         };
+
+        // The React mount can occur before API initialization provides these
+        // stores. Start the workspace now if that earlier mount returned early.
+        if (!window.Blockly?.derivWorkspace && !blockly_store.is_loading) {
+            void this.onMount();
+        }
     };
 
     onClickOutsideBlockly = (event: Event) => {

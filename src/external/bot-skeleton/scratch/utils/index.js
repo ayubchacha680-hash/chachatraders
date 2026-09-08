@@ -2,6 +2,7 @@ import { botNotification } from '@/components/bot-notification/bot-notification'
 import { notification_message } from '@/components/bot-notification/bot-notification-utils';
 import { getCurrencyDisplayCode } from '@/components/shared';
 import { localize } from '@deriv-com/translations';
+import { getMissingRequiredBlockTypes, matchesRequiredBlockType } from '../../utils/required-blocks';
 import { config } from '../../constants/config';
 import { LogTypes } from '../../constants/messages';
 import { error_message_map } from '../../utils/error-config';
@@ -396,7 +397,8 @@ export const addDomAsBlock = (el_block, parent_block = null) => {
 
 const getAllRequiredBlocks = (workspace, required_block_types) => {
     return workspace.getAllBlocks().filter(block => {
-        if (required_block_types.includes(block.type)) {
+        const required_type = block.type === 'free_bot_purchase' ? 'purchase' : block.type;
+        if (required_block_types.includes(required_type)) {
             return (
                 (block.childBlocks_.length === 0 && required_block_types.includes(block.category_)) ||
                 block.parentBlock_ === null
@@ -406,9 +408,10 @@ const getAllRequiredBlocks = (workspace, required_block_types) => {
 };
 
 const getMissingBlocks = (workspace, required_block_types) => {
-    return required_block_types.filter(blockType => {
-        return !workspace.getAllBlocks().some(block => block.type === blockType);
-    });
+    return getMissingRequiredBlockTypes(
+        workspace.getAllBlocks().map(block => block.type),
+        required_block_types
+    );
 };
 
 const getDisabledBlocks = required_blocks_check => {
@@ -417,8 +420,11 @@ const getDisabledBlocks = required_blocks_check => {
     const disabled_blocks = Object.fromEntries(
         workspace
             .getAllBlocks()
-            .filter(block => required_block_types.includes(block.type))
-            .map(block => [block.type, block.disabled])
+            .filter(
+                block =>
+                    required_block_types.some(required_type => matchesRequiredBlockType(block.type, required_type))
+            )
+            .map(block => [block.type === 'free_bot_purchase' ? 'purchase' : block.type, block.disabled])
     );
     const mandatory_blocks = ['before_purchase', 'purchase', 'trade_definition', 'trade_definition_tradeoptions'];
     const has_disabled_blocks = mandatory_blocks.some(type => disabled_blocks[type]);

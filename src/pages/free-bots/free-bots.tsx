@@ -2,7 +2,17 @@
 import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { DBOT_TABS } from '@/constants/bot-contents';
+import BlockConversion from '@/external/bot-skeleton/scratch/backward-compatibility';
+import { loadWorkspace } from '@/external/bot-skeleton/scratch/utils';
 import { useStore } from '@/hooks/useStore';
+import {
+    chachaOverCycleXml,
+    marketCycleBotXml,
+    over2KillerXml,
+    TCycleBotSettings,
+    TKillerSettings,
+} from './strategies/cycle-bots';
+import { validateCycleSettings, validateKillerSettings } from './strategies/strategy-helpers';
 import './free-bots.scss';
 
 /* ── XML generators ──────────────────────────────────────────────────────── */
@@ -225,11 +235,12 @@ type TBot = {
     id: string;
     name: string;
     description: string;
-    emoji: string;
+    identity: string;
     category: string;
     tag: string;
     winChance: string;
-    getXml: () => string;
+    getXml: (settings?: any) => string;
+    configurable?: 'cycle' | 'killer';
 };
 
 const BOTS: TBot[] = [
@@ -237,7 +248,7 @@ const BOTS: TBot[] = [
         id: 'rise_r100',
         name: 'Rise Martingale – Vol 100',
         description: 'Buys RISE (CALL) contracts on Volatility 100 Index. Doubles stake on each loss, resets on win. 5-tick duration.',
-        emoji: '📈',
+        identity: 'RISE',
         category: 'Rise / Fall',
         tag: 'Vol 100',
         winChance: '~50%',
@@ -247,7 +258,7 @@ const BOTS: TBot[] = [
         id: 'fall_r100',
         name: 'Fall Martingale – Vol 100',
         description: 'Buys FALL (PUT) contracts on Volatility 100 Index. Doubles stake on each loss, resets on win. 5-tick duration.',
-        emoji: '📉',
+        identity: 'FALL',
         category: 'Rise / Fall',
         tag: 'Vol 100',
         winChance: '~50%',
@@ -257,7 +268,7 @@ const BOTS: TBot[] = [
         id: 'rise_r50',
         name: 'Rise Martingale – Vol 50',
         description: 'Buys RISE contracts on Volatility 50 Index with lower volatility. Martingale ×2 on loss.',
-        emoji: '🚀',
+        identity: 'R50',
         category: 'Rise / Fall',
         tag: 'Vol 50',
         winChance: '~50%',
@@ -267,7 +278,7 @@ const BOTS: TBot[] = [
         id: 'fall_r50',
         name: 'Fall Martingale – Vol 50',
         description: 'Buys FALL contracts on Volatility 50 (1s) Index. Martingale ×2 on loss.',
-        emoji: '🔻',
+        identity: '1S',
         category: 'Rise / Fall',
         tag: 'Vol 50 (1s)',
         winChance: '~50%',
@@ -277,7 +288,7 @@ const BOTS: TBot[] = [
         id: 'digit_match_r100',
         name: 'Digit Match 5 – Vol 100',
         description: 'Wins when the last digit of the closing price equals 5. Martingale ×3 on loss. Higher payout per win.',
-        emoji: '🎯',
+        identity: 'MATCH',
         category: 'Digits',
         tag: 'Match',
         winChance: '~10%',
@@ -287,7 +298,7 @@ const BOTS: TBot[] = [
         id: 'digit_differ_r100',
         name: 'Digit Differ 5 – Vol 100',
         description: 'Wins when the last digit is NOT 5. High ~90% win rate, lower payout. Martingale ×1.5 on loss.',
-        emoji: '✂️',
+        identity: 'DIFF',
         category: 'Digits',
         tag: 'Differ',
         winChance: '~90%',
@@ -297,7 +308,7 @@ const BOTS: TBot[] = [
         id: 'digit_over5_r50',
         name: 'Digit Over 5 – Vol 50',
         description: 'Wins when the last digit is greater than 5 (digits 6, 7, 8, 9). ~40% win chance. Martingale ×2.',
-        emoji: '⬆️',
+        identity: 'OVER',
         category: 'Digits',
         tag: 'Over 5',
         winChance: '~40%',
@@ -307,7 +318,7 @@ const BOTS: TBot[] = [
         id: 'digit_under5_r50',
         name: 'Digit Under 5 – Vol 50',
         description: 'Wins when the last digit is less than 5 (digits 0, 1, 2, 3, 4). ~50% win chance. Martingale ×2.',
-        emoji: '⬇️',
+        identity: 'UNDER',
         category: 'Digits',
         tag: 'Under 5',
         winChance: '~50%',
@@ -317,7 +328,7 @@ const BOTS: TBot[] = [
         id: 'digit_even_1hz100',
         name: 'Digit Even – Vol 100 (1s)',
         description: 'Wins when the last digit is even (0, 2, 4, 6, 8). ~50% win chance on 1-second ticks. Martingale ×2.',
-        emoji: '⚖️',
+        identity: 'EVEN',
         category: 'Digits',
         tag: 'Even',
         winChance: '~50%',
@@ -327,54 +338,185 @@ const BOTS: TBot[] = [
         id: 'digit_odd_1hz100',
         name: 'Digit Odd – Vol 100 (1s)',
         description: 'Wins when the last digit is odd (1, 3, 5, 7, 9). ~50% win chance on fast 1-second ticks. Martingale ×2.',
-        emoji: '🔢',
+        identity: 'ODD',
         category: 'Digits',
         tag: 'Odd',
         winChance: '~50%',
         getXml: () => digitXML({ symbol: '1HZ100V', market: 'synthetic_index', submarket: 'random_index', tradetype: 'digitodd', contracttype: 'DIGITODD', prediction: null, stake: 1, mult: 2 }),
     },
+    {
+        id: 'chacha_over_cycle',
+        name: 'Chacha Over Cycle',
+        description: 'Six-step cycle: Differ, Over 1, Over 2, Differ, Under 8, Under 7. A loss is recovered with one parity-matched Even/Odd trade.',
+        identity: 'CYCLE',
+        category: 'Cycle Bots',
+        tag: 'Over 2',
+        winChance: 'Signal-based',
+        configurable: 'cycle',
+        getXml: settings => chachaOverCycleXml(settings!),
+    },
+    {
+        id: 'market_cycle_bot',
+        name: 'Market Cycle Bot',
+        description: 'Six-step cycle: Differ, Under 7, Under 6, Differ, Over 2, Over 3. A loss is recovered with one parity-matched Even/Odd trade.',
+        identity: 'VH',
+        category: 'Cycle Bots',
+        tag: 'VH cycle',
+        winChance: 'Signal-based',
+        configurable: 'cycle',
+        getXml: settings => marketCycleBotXml(settings!),
+    },
+    {
+        id: 'over_2_killer',
+        name: 'Over 2 Killer',
+        description: 'Requires 2 or 3 consecutive digits below 3, then enters Digit Over 2 only on the following digit above 2. Optional VH uses simulated losses first.',
+        identity: 'KILL',
+        category: 'Cycle Bots',
+        tag: 'Over 2',
+        winChance: '~70%',
+        configurable: 'killer',
+        getXml: settings => over2KillerXml(settings!),
+    },
 ];
 
-const CATEGORIES = ['All', 'Rise / Fall', 'Digits'];
+const CATEGORIES = ['All', 'Rise / Fall', 'Digits', 'Cycle Bots'];
+const DEFAULT_CYCLE_SETTINGS: TCycleBotSettings = {
+    symbol: 'R_100',
+    stake: 1,
+    multiplier: 2,
+};
+const DEFAULT_KILLER_SETTINGS: TKillerSettings = {
+    ...DEFAULT_CYCLE_SETTINGS,
+    take_profit: 10,
+    stop_loss: 5,
+    confirmation: 3,
+    vh_enabled: true,
+    vh_target: 3,
+};
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 
 const FreeBots = observer(() => {
-    const { dashboard } = useStore();
+    const { dashboard, run_panel } = useStore();
     const [category, setCategory] = useState('All');
     const [loaded_id, setLoadedId] = useState<string | null>(null);
+    const [loading_id, setLoadingId] = useState<string | null>(null);
     const [load_error, setLoadError] = useState<string | null>(null);
+    const [cycle_settings, setCycleSettings] = useState<TCycleBotSettings>(DEFAULT_CYCLE_SETTINGS);
+    const [killer_settings, setKillerSettings] = useState<TKillerSettings>(DEFAULT_KILLER_SETTINGS);
 
     const filtered = category === 'All' ? BOTS : BOTS.filter(b => b.category === category);
 
-    const loadBot = (bot: TBot) => {
+    const loadXmlWhenWorkspaceIsReady = async (
+        xml: string,
+        bot: TBot,
+        run_after_load: boolean,
+        attempts_left = 24
+    ) => {
+        const B = (window as any).Blockly;
+        const workspace = B?.derivWorkspace;
+
+        if (!workspace || !B?.Xml) {
+            if (attempts_left > 0) {
+                window.setTimeout(
+                    () => loadXmlWhenWorkspaceIsReady(xml, bot, run_after_load, attempts_left - 1),
+                    250
+                );
+            } else {
+                setLoadingId(null);
+                setLoadError('Bot Builder workspace did not finish loading. Please try again.');
+            }
+            return;
+        }
+
+        try {
+            let dom = B.utils.xml.textToDom(xml);
+            dom = new BlockConversion().convertStrategy(dom, false);
+            const unsupported_blocks = Array.from(dom.querySelectorAll('block'))
+                .map((block: Element) => block.getAttribute('type'))
+                .filter((type: string | null) => type && !B.Blocks[type]);
+            if (unsupported_blocks.length) {
+                throw new Error(`Unsupported block types: ${[...new Set(unsupported_blocks)].join(', ')}`);
+            }
+
+            const event_group = `free-bot-load-${Date.now()}`;
+            try {
+                await loadWorkspace(dom, event_group, workspace);
+            } finally {
+                B.Events.setGroup(false);
+            }
+            workspace.clearUndo();
+            workspace.current_strategy_id = B.utils.idGenerator.genUid();
+            setLoadedId(bot.id);
+            setLoadingId(null);
+            if (run_after_load) {
+                window.setTimeout(() => run_panel.onRunButtonClick(), 100);
+            }
+        } catch (err) {
+            setLoadingId(null);
+            setLoadError(`Failed to load bot: ${(err as Error).message ?? err}`);
+        }
+    };
+
+    const loadBot = (bot: TBot, run_after_load = false) => {
+        if (
+            run_after_load &&
+            !window.confirm(
+                `Load and run “${bot.name}”? This can place trades on your currently selected account. Confirm the stake and use a demo account first.`
+            )
+        ) {
+            return;
+        }
         setLoadError(null);
-        const xml = bot.getXml();
+        setLoadingId(bot.id);
+        const settings = bot.configurable === 'killer' ? killer_settings : cycle_settings;
+        const validation_error =
+            bot.configurable === 'killer'
+                ? validateKillerSettings(killer_settings)
+                : bot.configurable === 'cycle'
+                    ? validateCycleSettings(cycle_settings)
+                    : null;
+        if (validation_error) {
+            setLoadingId(null);
+            setLoadError(validation_error);
+            return;
+        }
+        let xml: string;
+        try {
+            xml = bot.getXml(bot.configurable ? settings : undefined);
+        } catch (error) {
+            setLoadingId(null);
+            setLoadError((error as Error).message || 'Unable to create this bot with the selected settings.');
+            return;
+        }
 
         // Switch to bot builder
         dashboard.setActiveTab(DBOT_TABS.BOT_BUILDER);
 
-        // Load XML into Blockly workspace after a short delay
-        setTimeout(() => {
-            try {
-                const B = (window as any).Blockly;
-                const ws = B?.derivWorkspace;
-                if (ws) {
-                    ws.clear();
-                    const dom = B.Xml.textToDom(xml);
-                    B.Xml.domToWorkspace(dom, ws);
-                    setLoadedId(bot.id);
-                } else {
-                    setLoadError('Bot Builder workspace not ready. Switch to Bot Builder tab first, then try again.');
-                }
-            } catch (err) {
-                setLoadError(`Failed to load bot: ${(err as Error).message ?? err}`);
-            }
-        }, 400);
+        // Bot Builder is lazy-loaded; wait until its Blockly workspace exists.
+        window.setTimeout(() => loadXmlWhenWorkspaceIsReady(xml, bot, run_after_load), 250);
     };
 
     const downloadBot = (bot: TBot) => {
-        const blob = new Blob([bot.getXml()], { type: 'application/xml' });
+        const settings = bot.configurable === 'killer' ? killer_settings : cycle_settings;
+        const validation_error =
+            bot.configurable === 'killer'
+                ? validateKillerSettings(killer_settings)
+                : bot.configurable === 'cycle'
+                    ? validateCycleSettings(cycle_settings)
+                    : null;
+        if (validation_error) {
+            setLoadError(validation_error);
+            return;
+        }
+        let xml: string;
+        try {
+            xml = bot.getXml(bot.configurable ? settings : undefined);
+        } catch (error) {
+            setLoadError((error as Error).message || 'Unable to create this bot with the selected settings.');
+            return;
+        }
+        const blob = new Blob([xml], { type: 'application/xml' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -388,14 +530,15 @@ const FreeBots = observer(() => {
             {/* Header */}
             <div className='free-bots__header'>
                 <div className='free-bots__header-text'>
-                    <h2 className='free-bots__title'>🤖 Free Strategy Bots</h2>
+                        <div className='free-bots__eyebrow'>ALPHATRADERS / BOT LIBRARY</div>
+                        <h2 className='free-bots__title'>Free Strategy Bots</h2>
                     <p className='free-bots__subtitle'>
                         Ready-made Martingale bots for Digits and Rise/Fall markets.
-                        Click <strong>Load</strong> to open in Bot Builder, or <strong>Download</strong> to save the XML.
+                        Load a configured strategy into Bot Builder, then choose whether to run it from your workspace.
                     </p>
                 </div>
                 <div className='free-bots__warning'>
-                    ⚠️ <strong>Risk warning:</strong> Martingale strategies can lead to large losses. Always set a loss limit and test on a demo account first.
+                    <strong>Risk warning</strong><span aria-hidden='true'> / </span>Martingale strategies can lead to large losses. Set a loss limit and test on a demo account first.
                 </div>
             </div>
 
@@ -413,15 +556,18 @@ const FreeBots = observer(() => {
             </div>
 
             {load_error && (
-                <div className='free-bots__error'>⚠️ {load_error}</div>
+                <div className='free-bots__error' role='alert'>{load_error}</div>
             )}
 
             {/* Bot grid */}
             <div className='free-bots__grid'>
                 {filtered.map(bot => (
-                    <div key={bot.id} className={`free-bots__card ${loaded_id === bot.id ? 'free-bots__card--loaded' : ''}`}>
+                    <article key={bot.id} className={`free-bots__card free-bots__card--${bot.id} ${loaded_id === bot.id ? 'free-bots__card--loaded' : ''} ${loading_id === bot.id ? 'free-bots__card--loading' : ''}`}>
                         <div className='free-bots__card-top'>
-                            <span className='free-bots__emoji'>{bot.emoji}</span>
+                            <div className='free-bots__identity' aria-hidden='true'>
+                                <span className='free-bots__identity-mark'>{bot.identity.slice(0, 1)}</span>
+                                <span className='free-bots__identity-label'>{bot.identity}</span>
+                            </div>
                             <div className='free-bots__tags'>
                                 <span className='free-bots__tag'>{bot.category}</span>
                                 <span className='free-bots__tag free-bots__tag--type'>{bot.tag}</span>
@@ -441,20 +587,61 @@ const FreeBots = observer(() => {
                                 <span className='free-bots__stat-val'>Martingale ×2</span>
                             </div>
                         </div>
+                        {bot.configurable === 'cycle' && (
+                            <fieldset className='free-bots__settings'>
+                                <legend>Cycle settings</legend>
+                                <label>
+                                    Symbol
+                                    <select
+                                        aria-label={`${bot.name} symbol`}
+                                        value={cycle_settings.symbol}
+                                        onChange={event => setCycleSettings({ ...cycle_settings, symbol: event.target.value })}
+                                    >
+                                        <option value='R_100'>Volatility 100 Index</option>
+                                        <option value='R_50'>Volatility 50 Index</option>
+                                        <option value='1HZ100V'>Volatility 100 (1s) Index</option>
+                                    </select>
+                                </label>
+                                {(['stake', 'multiplier'] as const).map(name => (
+                                    <label key={name}>
+                                        {name === 'take_profit' ? 'Take profit' : name === 'stop_loss' ? 'Stop loss' : name}
+                                        <input
+                                            aria-label={`${bot.name} ${name.replace('_', ' ')}`}
+                                            min='0.01'
+                                            step='0.01'
+                                            type='number'
+                                            value={cycle_settings[name]}
+                                            onChange={event => setCycleSettings({ ...cycle_settings, [name]: Number(event.target.value) })}
+                                        />
+                                    </label>
+                                ))}
+                            </fieldset>
+                        )}
+                        {bot.configurable === 'killer' && (
+                            <fieldset className='free-bots__settings'>
+                                <legend>Over 2 Killer settings</legend>
+                                <label>Symbol<select aria-label={`${bot.name} symbol`} value={killer_settings.symbol} onChange={event => setKillerSettings({ ...killer_settings, symbol: event.target.value })}><option value='R_100'>Volatility 100 Index</option><option value='R_50'>Volatility 50 Index</option><option value='1HZ100V'>Volatility 100 (1s) Index</option></select></label>
+                                {(['stake', 'multiplier', 'take_profit', 'stop_loss', 'vh_target'] as const).map(name => (
+                                    <label key={name}>{name.replace('_', ' ')}<input aria-label={`${bot.name} ${name.replace('_', ' ')}`} min={name === 'vh_target' ? '1' : '0.01'} step={name === 'vh_target' ? '1' : '0.01'} type='number' value={killer_settings[name]} onChange={event => setKillerSettings({ ...killer_settings, [name]: Number(event.target.value) })} /></label>
+                                ))}
+                                <label>Below-3 confirmation<select aria-label={`${bot.name} confirmation`} value={killer_settings.confirmation} onChange={event => setKillerSettings({ ...killer_settings, confirmation: Number(event.target.value) })}><option value='2'>2 digits</option><option value='3'>3 digits</option></select></label>
+                                <label className='free-bots__checkbox'><input aria-label={`${bot.name} enable volatility hunter`} type='checkbox' checked={killer_settings.vh_enabled} onChange={event => setKillerSettings({ ...killer_settings, vh_enabled: event.target.checked })} /> Enable VH simulated-loss filter</label>
+                            </fieldset>
+                        )}
 
                         {loaded_id === bot.id && (
-                            <div className='free-bots__loaded-badge'>✅ Loaded into Bot Builder</div>
+                            <div className='free-bots__loaded-badge'><span aria-hidden='true' />Loaded into Bot Builder</div>
                         )}
 
                         <div className='free-bots__card-actions'>
-                            <button className='free-bots__btn free-bots__btn--load' onClick={() => loadBot(bot)}>
-                                🚀 Load Bot
+                            <button className='free-bots__btn free-bots__btn--load' onClick={() => loadBot(bot)} aria-label={`Load ${bot.name} in Bot Builder`} disabled={loading_id === bot.id}>
+                                <span className='free-bots__btn-indicator' aria-hidden='true' />{loading_id === bot.id ? 'Loading' : 'Load'}
                             </button>
-                            <button className='free-bots__btn free-bots__btn--dl' onClick={() => downloadBot(bot)}>
-                                ⬇ XML
+                            <button className='free-bots__btn free-bots__btn--run' onClick={() => loadBot(bot, true)} aria-label={`Load and run ${bot.name}`} disabled={loading_id === bot.id}>
+                                Load &amp; Run
                             </button>
                         </div>
-                    </div>
+                    </article>
                 ))}
             </div>
         </div>

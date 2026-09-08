@@ -114,6 +114,18 @@
                 }
             }
 
+            &__list--main__tabs {
+                background: #1f9d55;
+
+                .dc-tabs__item {
+                    color: #fff;
+                }
+
+                .dc-tabs__active {
+                    background: #157a42;
+                }
+            }
+
             &__content {
                 @include mobile-or-tablet-screen {
                     width: 100%;
@@ -180,14 +192,6 @@
                 }
             }
 
-            li#id-free-bots.dc-tabs__active {
-                background: #1f9d55;
-                color: #fff;
-
-                span {
-                    color: inherit;
-                }
-            }
         }
     }
 

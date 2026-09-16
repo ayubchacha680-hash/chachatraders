@@ -37,11 +37,12 @@ describe('free bot strategy helpers', () => {
         expect(validateStrategySettings({ stake: 0, multiplier: 2, take_profit: 5, stop_loss: 5 })).toMatch(/Stake/);
     });
     it('generates the exact contract cycles and runnable Blockly XML', () => {
-        const cycle = { symbol: 'R_100', stake: 1, multiplier: 2 };
+        const cycle = { symbol: 'R_100', currency: 'EUR', stake: 1, multiplier: 2 };
         const killer = { ...cycle, take_profit: 10, stop_loss: 5, confirmation: 2, vh_enabled: true, vh_target: 3 };
         [chachaOverCycleXml(cycle), marketCycleBotXml(cycle), over2KillerXml(killer)].forEach(xml => {
             const document = new DOMParser().parseFromString(xml, 'text/xml');
             expect(document.querySelector('parsererror')).toBeNull();
+            expect(document.querySelector('field[name="CURRENCY_LIST"]')?.textContent).toBe('EUR');
             expect(document.querySelector('block[type="before_purchase"] block[type="free_bot_purchase"]')).not.toBeNull();
             expect(document.querySelector('block[type="after_purchase"] block[type="trade_again"]')).not.toBeNull();
         });

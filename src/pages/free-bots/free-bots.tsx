@@ -1,7 +1,8 @@
 // @ts-nocheck
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { DBOT_TABS } from '@/constants/bot-contents';
+import { ApiHelpers } from '@/external/bot-skeleton';
 import BlockConversion from '@/external/bot-skeleton/scratch/backward-compatibility';
 import { loadWorkspace } from '@/external/bot-skeleton/scratch/utils';
 import { useStore } from '@/hooks/useStore';
@@ -380,8 +381,25 @@ const BOTS: TBot[] = [
 ];
 
 const CATEGORIES = ['All', 'Rise / Fall', 'Digits', 'Cycle Bots'];
+type TMarketOption = { symbol: string; label: string };
+const FALLBACK_CYCLE_MARKETS: TMarketOption[] = [
+    { symbol: 'R_10', label: 'Volatility 10 Index' },
+    { symbol: 'R_25', label: 'Volatility 25 Index' },
+    { symbol: 'R_50', label: 'Volatility 50 Index' },
+    { symbol: 'R_75', label: 'Volatility 75 Index' },
+    { symbol: 'R_100', label: 'Volatility 100 Index' },
+    { symbol: '1HZ10V', label: 'Volatility 10 (1s) Index' },
+    { symbol: '1HZ15V', label: 'Volatility 15 (1s) Index' },
+    { symbol: '1HZ25V', label: 'Volatility 25 (1s) Index' },
+    { symbol: '1HZ30V', label: 'Volatility 30 (1s) Index' },
+    { symbol: '1HZ50V', label: 'Volatility 50 (1s) Index' },
+    { symbol: '1HZ75V', label: 'Volatility 75 (1s) Index' },
+    { symbol: '1HZ90V', label: 'Volatility 90 (1s) Index' },
+    { symbol: '1HZ100V', label: 'Volatility 100 (1s) Index' },
+];
 const DEFAULT_CYCLE_SETTINGS: TCycleBotSettings = {
     symbol: 'R_100',
+    currency: 'USD',
     stake: 1,
     multiplier: 2,
 };
@@ -397,15 +415,55 @@ const DEFAULT_KILLER_SETTINGS: TKillerSettings = {
 /* ── Component ───────────────────────────────────────────────────────────── */
 
 const FreeBots = observer(() => {
-    const { dashboard, run_panel } = useStore();
+    const { client, dashboard, run_panel } = useStore();
     const [category, setCategory] = useState('All');
     const [loaded_id, setLoadedId] = useState<string | null>(null);
     const [loading_id, setLoadingId] = useState<string | null>(null);
     const [load_error, setLoadError] = useState<string | null>(null);
+    const [market_options, setMarketOptions] = useState<TMarketOption[]>(FALLBACK_CYCLE_MARKETS);
     const [cycle_settings, setCycleSettings] = useState<TCycleBotSettings>(DEFAULT_CYCLE_SETTINGS);
     const [killer_settings, setKillerSettings] = useState<TKillerSettings>(DEFAULT_KILLER_SETTINGS);
 
     const filtered = category === 'All' ? BOTS : BOTS.filter(b => b.category === category);
+
+    useEffect(() => {
+        let cancelled = false;
+        let retry_timer: number | undefined;
+        let attempts = 0;
+
+        const syncMarkets = async () => {
+            const active_symbols = ApiHelpers?.instance?.active_symbols;
+            if (!active_symbols) {
+                if (!cancelled && attempts++ < 20) retry_timer = window.setTimeout(syncMarkets, 250);
+                return;
+            }
+            try {
+                if (!Object.keys(active_symbols.processed_symbols || {}).length) {
+                    await active_symbols.retrieveActiveSymbols(true);
+                }
+                const live_markets = active_symbols
+                    .getAllSymbols()
+                    .filter(symbol => symbol.market === 'synthetic_index' && symbol.submarket === 'random_index')
+                    .map(symbol => ({ symbol: symbol.symbol, label: symbol.symbol_display }))
+                    .sort((left, right) => left.label.localeCompare(right.label));
+                if (!cancelled && live_markets.length) {
+                    setMarketOptions(live_markets);
+                    const hasCycleSymbol = live_markets.some(option => option.symbol === cycle_settings.symbol);
+                    const hasKillerSymbol = live_markets.some(option => option.symbol === killer_settings.symbol);
+                    if (!hasCycleSymbol) setCycleSettings(settings => ({ ...settings, symbol: live_markets[0].symbol }));
+                    if (!hasKillerSymbol) setKillerSettings(settings => ({ ...settings, symbol: live_markets[0].symbol }));
+                }
+            } catch (error) {
+                if (!cancelled) setLoadError(`Unable to refresh markets: ${(error as Error).message}`);
+            }
+        };
+
+        syncMarkets();
+        return () => {
+            cancelled = true;
+            if (retry_timer) window.clearTimeout(retry_timer);
+        };
+    }, []);
 
     const loadXmlWhenWorkspaceIsReady = async (
         xml: string,
@@ -469,7 +527,8 @@ const FreeBots = observer(() => {
         }
         setLoadError(null);
         setLoadingId(bot.id);
-        const settings = bot.configurable === 'killer' ? killer_settings : cycle_settings;
+        const configured_settings = bot.configurable === 'killer' ? killer_settings : cycle_settings;
+        const settings = { ...configured_settings, currency: client.currency || 'USD' };
         const validation_error =
             bot.configurable === 'killer'
                 ? validateKillerSettings(killer_settings)
@@ -498,7 +557,8 @@ const FreeBots = observer(() => {
     };
 
     const downloadBot = (bot: TBot) => {
-        const settings = bot.configurable === 'killer' ? killer_settings : cycle_settings;
+        const configured_settings = bot.configurable === 'killer' ? killer_settings : cycle_settings;
+        const settings = { ...configured_settings, currency: client.currency || 'USD' };
         const validation_error =
             bot.configurable === 'killer'
                 ? validateKillerSettings(killer_settings)
@@ -597,9 +657,9 @@ const FreeBots = observer(() => {
                                         value={cycle_settings.symbol}
                                         onChange={event => setCycleSettings({ ...cycle_settings, symbol: event.target.value })}
                                     >
-                                        <option value='R_100'>Volatility 100 Index</option>
-                                        <option value='R_50'>Volatility 50 Index</option>
-                                        <option value='1HZ100V'>Volatility 100 (1s) Index</option>
+                                        {market_options.map(option => (
+                                            <option key={option.symbol} value={option.symbol}>{option.label}</option>
+                                        ))}
                                     </select>
                                 </label>
                                 {(['stake', 'multiplier'] as const).map(name => (
@@ -620,7 +680,7 @@ const FreeBots = observer(() => {
                         {bot.configurable === 'killer' && (
                             <fieldset className='free-bots__settings'>
                                 <legend>Over 2 Killer settings</legend>
-                                <label>Symbol<select aria-label={`${bot.name} symbol`} value={killer_settings.symbol} onChange={event => setKillerSettings({ ...killer_settings, symbol: event.target.value })}><option value='R_100'>Volatility 100 Index</option><option value='R_50'>Volatility 50 Index</option><option value='1HZ100V'>Volatility 100 (1s) Index</option></select></label>
+                                <label>Symbol<select aria-label={`${bot.name} symbol`} value={killer_settings.symbol} onChange={event => setKillerSettings({ ...killer_settings, symbol: event.target.value })}>{market_options.map(option => <option key={option.symbol} value={option.symbol}>{option.label}</option>)}</select></label>
                                 {(['stake', 'multiplier', 'take_profit', 'stop_loss', 'vh_target'] as const).map(name => (
                                     <label key={name}>{name.replace('_', ' ')}<input aria-label={`${bot.name} ${name.replace('_', ' ')}`} min={name === 'vh_target' ? '1' : '0.01'} step={name === 'vh_target' ? '1' : '0.01'} type='number' value={killer_settings[name]} onChange={event => setKillerSettings({ ...killer_settings, [name]: Number(event.target.value) })} /></label>
                                 ))}

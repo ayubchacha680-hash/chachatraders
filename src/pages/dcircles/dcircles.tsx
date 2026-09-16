@@ -8,7 +8,8 @@ const WINDOW_SIZE = 1000;
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 /* ── Slot/circle dimensions ─────────────────────────────────────────────── */
-const SLOT_W      = 66;  // px – total slot width (10 × 66 + 9 × 6 gap = 714px total)
+const SLOT_W      = 66;
+const SLOT_GAP    = 16;
 const CIRCLE_SIZE = 56;  // px – circle diameter
 
 /* ── Gradient colours per rank ─────────────────────────────────────────── */
@@ -112,7 +113,7 @@ const DCircles = () => {
 
     const color_map   = assignColors(digits);
     const price_str   = current_price !== null ? current_price.toFixed(pip_size) : '—';
-    const tri_x       = current_digit !== null ? current_digit * SLOT_W + SLOT_W / 2 : -999;
+    const tri_x       = current_digit !== null ? current_digit * (SLOT_W + SLOT_GAP) + SLOT_W / 2 : -999;
 
     const STATUS_LABEL: Record<string, string> = {
         idle: 'Idle', connecting: 'Connecting', open: 'Live',
@@ -205,7 +206,11 @@ const DCircles = () => {
 
                 <div
                     className='dcircles__row'
-                    style={{ '--slot-w': `${SLOT_W}px`, '--circle-size': `${CIRCLE_SIZE}px` } as React.CSSProperties}
+                    style={{
+                        '--slot-w': `${SLOT_W}px`,
+                        '--slot-gap': `${SLOT_GAP}px`,
+                        '--circle-size': `${CIRCLE_SIZE}px`,
+                    } as React.CSSProperties}
                 >
                     {digits.map(({ digit, percentage }) => {
                         const { grad, glow } = color_map[digit] ?? COLOR_MAP.normal;

@@ -34,6 +34,15 @@ window.Blockly.Blocks.free_bot_purchase = {
         });
         this.setNextStatement(false);
     },
+    meta() {
+        return {
+            display_name: localize('Dynamic cycle purchase'),
+            description: localize(
+                'Purchases a selected Digit contract with a runtime barrier. Use it inside Purchase conditions when a strategy must switch between Differ, Over, Under, Even, and Odd.'
+            ),
+            key_words: localize('buy cycle dynamic digit barrier'),
+        };
+    },
     restricted_parents: ['before_purchase'],
 };
 

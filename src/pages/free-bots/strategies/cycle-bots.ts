@@ -1,8 +1,12 @@
 import { TStrategySettings, validateStrategySettings } from './strategy-helpers';
 
-export type TCycleBotSettings = Pick<TStrategySettings, 'stake' | 'multiplier'> & { symbol: string };
+export type TCycleBotSettings = Pick<TStrategySettings, 'stake' | 'multiplier'> & {
+    symbol: string;
+    currency: string;
+};
 export type TKillerSettings = TStrategySettings & {
     symbol: string;
+    currency: string;
     confirmation: number;
     vh_enabled: boolean;
     vh_target: number;
@@ -47,8 +51,14 @@ const conditional = (branches: { condition: string; statement: string }[], other
     return `<block type="controls_if">${mutation}${cases}${otherwise ? `<statement name="ELSE">${otherwise}</statement>` : ''}</block>`;
 };
 
-const tradeDefinition = (symbol: string, contract: 'DIGITDIFF' | 'DIGITOVER', amount: string, prediction: string) => `
-<block type="trade_definition" id="trade" x="0" y="0"><statement name="TRADE_OPTIONS"><block type="trade_definition_market" id="market" deletable="false" movable="false"><field name="MARKET_LIST">synthetic_index</field><field name="SUBMARKET_LIST">random_index</field><field name="SYMBOL_LIST">${escapeXml(symbol)}</field><next><block type="trade_definition_tradetype" id="type" deletable="false" movable="false"><field name="TRADETYPECAT_LIST">digits</field><field name="TRADETYPE_LIST">${contract === 'DIGITDIFF' ? 'digitdiff' : 'digitover'}</field><next><block type="trade_definition_contracttype" id="contract" deletable="false" movable="false"><field name="TYPE_LIST">${contract}</field><next><block type="trade_definition_candleinterval" id="interval" deletable="false" movable="false"><field name="CANDLEINTERVAL_LIST">60</field></block></next></block></next></block></next></block></statement><statement name="SUBMARKET"><block type="trade_definition_tradeoptions" id="options"><mutation has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation><field name="DURATIONTYPE_LIST">t</field><field name="CURRENCY_LIST">USD</field><value name="DURATION">${number(1)}</value><value name="AMOUNT">${amount}</value><value name="PREDICTION">${prediction}</value></block></statement>`;
+const tradeDefinition = (
+    symbol: string,
+    currency: string,
+    contract: 'DIGITDIFF' | 'DIGITOVER',
+    amount: string,
+    prediction: string
+) => `
+<block type="trade_definition" id="trade" x="0" y="0"><statement name="TRADE_OPTIONS"><block type="trade_definition_market" id="market" deletable="false" movable="false"><field name="MARKET_LIST">synthetic_index</field><field name="SUBMARKET_LIST">random_index</field><field name="SYMBOL_LIST">${escapeXml(symbol)}</field><next><block type="trade_definition_tradetype" id="type" deletable="false" movable="false"><field name="TRADETYPECAT_LIST">digits</field><field name="TRADETYPE_LIST">${contract === 'DIGITDIFF' ? 'digitdiff' : 'digitover'}</field><next><block type="trade_definition_contracttype" id="contract" deletable="false" movable="false"><field name="TYPE_LIST">${contract}</field><next><block type="trade_definition_candleinterval" id="interval" deletable="false" movable="false"><field name="CANDLEINTERVAL_LIST">60</field></block></next></block></next></block></next></block></statement><statement name="SUBMARKET"><block type="trade_definition_tradeoptions" id="options"><mutation has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation><field name="DURATIONTYPE_LIST">t</field><field name="CURRENCY_LIST">${escapeXml(currency)}</field><value name="DURATION">${number(1)}</value><value name="AMOUNT">${amount}</value><value name="PREDICTION">${prediction}</value></block></statement>`;
 
 type TCycleStep = { contract: 'DIGITDIFF' | 'DIGITOVER' | 'DIGITUNDER'; prediction?: number };
 
@@ -95,7 +105,7 @@ const sixStepCycleXml = (settings: TCycleBotSettings, name: string, steps: TCycl
     );
     return `<xml xmlns="http://www.w3.org/1999/xhtml" collection="false" is_dbot="true"><variables>
 <variable id="stake">cycle:stake</variable><variable id="initial">cycle:initial</variable><variable id="mult">cycle:multiplier</variable><variable id="step">cycle:step</variable><variable id="recovery">cycle:recovery pending</variable>
-</variables>${tradeDefinition(settings.symbol, 'DIGITDIFF', variable('stake', 'cycle:stake'), number(0))}
+</variables>${tradeDefinition(settings.symbol, settings.currency, 'DIGITDIFF', variable('stake', 'cycle:stake'), number(0))}
 <statement name="INITIALIZATION">${chain(set('stake', 'cycle:stake', number(settings.stake)), set('initial', 'cycle:initial', number(settings.stake)), set('mult', 'cycle:multiplier', number(settings.multiplier)), set('step', 'cycle:step', number(0)), set('recovery', 'cycle:recovery pending', bool(false)))}</statement></block>
 <block type="before_purchase" id="before" x="0" y="560"><statement name="BEFOREPURCHASE_STACK">${before_purchase}</statement></block>
 <block type="after_purchase" id="after" x="520" y="560"><statement name="AFTERPURCHASE_STACK">${withNext(after_result, '<block type="trade_again"/>')}</statement></block>
@@ -203,7 +213,7 @@ export const over2KillerXml = (settings: TKillerSettings) => {
 
     return `<xml xmlns="http://www.w3.org/1999/xhtml" collection="false" is_dbot="true"><variables>
 <variable id="stake">killer:stake</variable><variable id="initial">killer:initial</variable><variable id="mult">killer:multiplier</variable><variable id="profit">killer:total profit</variable><variable id="low">killer:below 3 count</variable><variable id="signal">killer:qualifying signal</variable><variable id="virtual">killer:virtual trade open</variable><variable id="vh">killer:simulated losses</variable><variable id="tp">killer:take profit</variable><variable id="sl">killer:stop loss</variable>
-</variables>${tradeDefinition(settings.symbol, 'DIGITOVER', variable('stake', 'killer:stake'), number(2))}
+</variables>${tradeDefinition(settings.symbol, settings.currency, 'DIGITOVER', variable('stake', 'killer:stake'), number(2))}
 <statement name="INITIALIZATION">${chain(set('stake', 'killer:stake', number(settings.stake)), set('initial', 'killer:initial', number(settings.stake)), set('mult', 'killer:multiplier', number(settings.multiplier)), set('tp', 'killer:take profit', number(settings.take_profit)), set('sl', 'killer:stop loss', number(settings.stop_loss)), set('low', 'killer:below 3 count', number(0)), set('profit', 'killer:total profit', number(0)), set('vh', 'killer:simulated losses', number(0)), set('signal', 'killer:qualifying signal', bool(false)), set('virtual', 'killer:virtual trade open', bool(false)))}</statement></block>
 <block type="tick_analysis" id="killer_ticks" x="0" y="500"><statement name="TICKANALYSIS_STACK">${chain(settle_virtual, detect_signal)}</statement></block>
 <block type="before_purchase" id="killer_before" x="0" y="760"><statement name="BEFOREPURCHASE_STACK">${entry}</statement></block>

@@ -117,6 +117,12 @@
             &__list--main__tabs {
                 background: #1f9d55;
 
+                @include desktop-screen {
+                    .dc-tabs__item {
+                        padding-inline: 1rem;
+                    }
+                }
+
                 .dc-tabs__item {
                     color: #fff;
                 }

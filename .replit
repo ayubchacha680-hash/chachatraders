@@ -41,5 +41,5 @@ externalPort = 3001
 [userenv]
 
 [userenv.shared]
-NEXT_PUBLIC_DERIV_APP_ID = "33UqjFXms8QW1P1XiIPnE"
+NEXT_PUBLIC_DERIV_APP_ID = "33Byg77FSJCweZlAvmS9A"
 NEXT_PUBLIC_DERIV_ENV = "production"

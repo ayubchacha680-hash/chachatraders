@@ -261,6 +261,90 @@
         box-shadow: 0 0 6px #16c78488;
     }
 
+    /* ── Over / under percentage pairs ── */
+    &__pairs-panel {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+        flex-shrink: 0;
+    }
+
+    &__pair-card {
+        padding: 1rem 1.2rem;
+        border: 1px solid var(--dc-line);
+        border-radius: 0.8rem;
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: 0 7px 18px rgba(44, 67, 57, 0.06);
+    }
+
+    &__pair-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.8rem;
+        margin-bottom: 0.9rem;
+        color: var(--dc-ink);
+        font-size: 1.2rem;
+        font-weight: 800;
+    }
+
+    &__pair-sample {
+        color: var(--dc-muted);
+        font-size: 0.95rem;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    &__pair-values {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.9rem;
+    }
+
+    &__pair-side {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+
+        strong {
+            color: var(--dc-ink);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.7rem;
+            line-height: 1;
+        }
+
+        &--over .dcircles__pair-label,
+        &--over strong { color: #087c59; }
+
+        &--under .dcircles__pair-label,
+        &--under strong { color: #bc332f; }
+    }
+
+    &__pair-label {
+        color: var(--dc-muted);
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    &__pair-bar {
+        display: block;
+        height: 0.45rem;
+        margin-top: 0.25rem;
+        overflow: hidden;
+        border-radius: 0.3rem;
+        background: #e9efeb;
+
+        span {
+            display: block;
+            height: 100%;
+            border-radius: inherit;
+            transition: width 200ms ease;
+        }
+
+        .dcircles__pair-side--over & span { background: #16c784; }
+        .dcircles__pair-side--under & span { background: #e53935; }
+    }
+
     /* ── Bias panel ── */
     &__bias-panel {
         display: grid;
@@ -360,6 +444,10 @@
         }
 
         &__bias-panel {
+            grid-template-columns: 1fr;
+        }
+
+        &__pairs-panel {
             grid-template-columns: 1fr;
         }
     }

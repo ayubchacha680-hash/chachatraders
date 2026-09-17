@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DIGIT_SYMBOLS } from '@/constants/analysis';
+import { DIGIT_SYMBOLS, OVER_UNDER_PAIRS } from '@/constants/analysis';
 import { getPublicTickSocket } from '@/services/analysis/public-tick-socket';
 import { RollingDigitWindow, getLastDigit, TDigitStats } from '@/services/analysis/digit-analysis';
 import './dcircles.scss';
@@ -142,6 +142,20 @@ const DCircles = () => {
     const cold_digit   = sorted[sorted.length - 1];
     const hot_dev      = hot_digit.percentage - 10;   // deviation from expected 10%
     const cold_dev     = 10 - cold_digit.percentage;
+    const over_under_pairs = OVER_UNDER_PAIRS.slice(0, 3).map(pair => {
+        const over_count = digits
+            .filter(digit => digit.digit > pair.over_barrier)
+            .reduce((sum, digit) => sum + digit.count, 0);
+        const under_count = digits
+            .filter(digit => digit.digit < pair.under_barrier)
+            .reduce((sum, digit) => sum + digit.count, 0);
+
+        return {
+            ...pair,
+            over_percentage: total_count > 0 ? (over_count / total_count) * 100 : 0,
+            under_percentage: total_count > 0 ? (under_count / total_count) * 100 : 0,
+        };
+    });
 
     return (
         <div className='dcircles'>
@@ -239,6 +253,36 @@ const DCircles = () => {
                     })}
                 </div>
             </div>
+
+            {/* ── Over / under probability pairs ── */}
+            <section className='dcircles__pairs-panel' aria-label='Over and under percentages'>
+                {over_under_pairs.map(({ over_barrier, under_barrier, over_percentage, under_percentage }) => (
+                    <div className='dcircles__pair-card' key={`${over_barrier}-${under_barrier}`}>
+                        <div className='dcircles__pair-header'>
+                            <span>Over {over_barrier} vs Under {under_barrier}</span>
+                            <span className='dcircles__pair-sample'>
+                                {sample_size.toLocaleString()} ticks
+                            </span>
+                        </div>
+                        <div className='dcircles__pair-values'>
+                            <div className='dcircles__pair-side dcircles__pair-side--over'>
+                                <span className='dcircles__pair-label'>Over {over_barrier}</span>
+                                <strong>{over_percentage.toFixed(1)}%</strong>
+                                <span className='dcircles__pair-bar'>
+                                    <span style={{ width: `${over_percentage}%` }} />
+                                </span>
+                            </div>
+                            <div className='dcircles__pair-side dcircles__pair-side--under'>
+                                <span className='dcircles__pair-label'>Under {under_barrier}</span>
+                                <strong>{under_percentage.toFixed(1)}%</strong>
+                                <span className='dcircles__pair-bar'>
+                                    <span style={{ width: `${under_percentage}%` }} />
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </section>
 
             {/* ── Bias signals panel ── */}
             <div className='dcircles__bias-panel'>

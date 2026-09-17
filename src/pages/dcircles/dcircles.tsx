@@ -304,25 +304,6 @@ const DCircles = () => {
             <section className='dcircles__pairs-panel dcircles__summary-panel' aria-label='Digit summary percentages'>
                 <div className='dcircles__pair-card'>
                     <div className='dcircles__pair-header'>
-                        <span>Even vs Odd</span>
-                        <span className='dcircles__pair-sample'>{sample_size.toLocaleString()} ticks</span>
-                    </div>
-                    <div className='dcircles__pair-values'>
-                        <div className='dcircles__pair-side dcircles__pair-side--over'>
-                            <span className='dcircles__pair-label'>Even</span>
-                            <strong>{even_pct.toFixed(1)}%</strong>
-                            <span className='dcircles__pair-bar'><span style={{ width: `${even_pct}%` }} /></span>
-                        </div>
-                        <div className='dcircles__pair-side dcircles__pair-side--under'>
-                            <span className='dcircles__pair-label'>Odd</span>
-                            <strong>{odd_pct.toFixed(1)}%</strong>
-                            <span className='dcircles__pair-bar'><span style={{ width: `${odd_pct}%` }} /></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className='dcircles__pair-card'>
-                    <div className='dcircles__pair-header'>
                         <span>Over 4 vs Under 5</span>
                         <span className='dcircles__pair-sample'>{sample_size.toLocaleString()} ticks</span>
                     </div>
@@ -336,6 +317,25 @@ const DCircles = () => {
                             <span className='dcircles__pair-label'>Under 5</span>
                             <strong>{under_pct.toFixed(1)}%</strong>
                             <span className='dcircles__pair-bar'><span style={{ width: `${under_pct}%` }} /></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className='dcircles__pair-card'>
+                    <div className='dcircles__pair-header'>
+                        <span>Even vs Odd</span>
+                        <span className='dcircles__pair-sample'>{sample_size.toLocaleString()} ticks</span>
+                    </div>
+                    <div className='dcircles__pair-values'>
+                        <div className='dcircles__pair-side dcircles__pair-side--over'>
+                            <span className='dcircles__pair-label'>Even</span>
+                            <strong>{even_pct.toFixed(1)}%</strong>
+                            <span className='dcircles__pair-bar'><span style={{ width: `${even_pct}%` }} /></span>
+                        </div>
+                        <div className='dcircles__pair-side dcircles__pair-side--under'>
+                            <span className='dcircles__pair-label'>Odd</span>
+                            <strong>{odd_pct.toFixed(1)}%</strong>
+                            <span className='dcircles__pair-bar'><span style={{ width: `${odd_pct}%` }} /></span>
                         </div>
                     </div>
                 </div>

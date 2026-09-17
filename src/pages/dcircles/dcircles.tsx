@@ -12,6 +12,14 @@ const SLOT_W      = 66;
 const SLOT_GAP    = 16;
 const CIRCLE_SIZE = 56;  // px – circle diameter
 
+const emptyDigitStats = (): TDigitStats[] =>
+    DIGITS.map(digit => ({ digit, count: 0, percentage: 0 }));
+
+const getHottestDigit = (stats: TDigitStats[]): TDigitStats | null => {
+    if (!stats.some(digit => digit.count > 0)) return null;
+    return stats.reduce((hottest, digit) => digit.percentage > hottest.percentage ? digit : hottest);
+};
+
 /* ── Gradient colours per rank ─────────────────────────────────────────── */
 const COLOR_MAP: Record<string, { grad: string; glow: string }> = {
     highest: { grad: 'radial-gradient(circle at 38% 32%, #66ff99 0%, #00cc00 55%, #005500 100%)', glow: '#00cc00' },
@@ -40,18 +48,12 @@ function assignColors(digits: TDigitStats[]): Record<number, { grad: string; glo
     return result;
 }
 
-/* ── Bias helpers ───────────────────────────────────────────────────────── */
-function strengthLabel(edge: number): string {
-    if (edge >= 4) return 'Strong';
-    if (edge >= 2) return 'Moderate';
-    if (edge >= 0.5) return 'Weak';
-    return '';
-}
-
 /* ── Main component ─────────────────────────────────────────────────────── */
 const DCircles = () => {
     const [symbol, setSymbol]               = useState('R_100');
-    const [digits, setDigits]               = useState<TDigitStats[]>(DIGITS.map(d => ({ digit: d, count: 0, percentage: 0 })));
+    const [digits, setDigits]               = useState<TDigitStats[]>(emptyDigitStats());
+    const [digits_25, setDigits25]          = useState<TDigitStats[]>(emptyDigitStats());
+    const [digits_50, setDigits50]          = useState<TDigitStats[]>(emptyDigitStats());
     const [current_digit, setCurrentDigit]  = useState<number | null>(null);
     const [current_price, setCurrentPrice]  = useState<number | null>(null);
     const [sample_size, setSampleSize]      = useState(0);
@@ -60,13 +62,21 @@ const DCircles = () => {
     const [pip_size, setPipSize]            = useState(2);
 
     const window_ref = useRef(new RollingDigitWindow(WINDOW_SIZE));
+    const window_25_ref = useRef(new RollingDigitWindow(25));
+    const window_50_ref = useRef(new RollingDigitWindow(50));
     const frame_ref  = useRef<number | null>(null);
 
     /* subscribe to tick stream */
     useEffect(() => {
         const win = window_ref.current;
+        const win_25 = window_25_ref.current;
+        const win_50 = window_50_ref.current;
         win.reset();
-        setDigits(DIGITS.map(d => ({ digit: d, count: 0, percentage: 0 })));
+        win_25.reset();
+        win_50.reset();
+        setDigits(emptyDigitStats());
+        setDigits25(emptyDigitStats());
+        setDigits50(emptyDigitStats());
         setCurrentDigit(null);
         setCurrentPrice(null);
         setSampleSize(0);
@@ -77,9 +87,16 @@ const DCircles = () => {
         socket.subscribe(symbol, WINDOW_SIZE, {
             onHistory: ({ prices, pip_size: ps }) => {
                 setPipSize(ps);
-                win.seed(prices.map(p => getLastDigit(p, ps)), prices);
+                const history_digits = prices.map(p => getLastDigit(p, ps));
+                win.seed(history_digits, prices);
+                win_25.seed(history_digits, prices);
+                win_50.seed(history_digits, prices);
                 const snap = win.snapshot();
+                const snap_25 = win_25.snapshot();
+                const snap_50 = win_50.snapshot();
                 setDigits(snap.digits);
+                setDigits25(snap_25.digits);
+                setDigits50(snap_50.digits);
                 setSampleSize(snap.sample_size);
                 setTotalTicks(snap.total_ticks);
                 setCurrentDigit(snap.last_digit);
@@ -89,13 +106,19 @@ const DCircles = () => {
                 setPipSize(tick.pip_size);
                 const d = getLastDigit(tick.quote, tick.pip_size);
                 win.push(d, tick.quote);
+                win_25.push(d, tick.quote);
+                win_50.push(d, tick.quote);
                 setCurrentDigit(d);
                 setCurrentPrice(tick.quote);
                 if (frame_ref.current) return;
                 frame_ref.current = requestAnimationFrame(() => {
                     frame_ref.current = null;
                     const snap = win.snapshot();
+                    const snap_25 = win_25.snapshot();
+                    const snap_50 = win_50.snapshot();
                     setDigits(snap.digits);
+                    setDigits25(snap_25.digits);
+                    setDigits50(snap_50.digits);
                     setSampleSize(snap.sample_size);
                     setTotalTicks(snap.total_ticks);
                 });
@@ -126,22 +149,15 @@ const DCircles = () => {
     const odd_count    = total_count - even_count;
     const even_pct     = total_count > 0 ? (even_count / total_count) * 100 : 0;
     const odd_pct      = total_count > 0 ? (odd_count / total_count) * 100 : 0;
-    const eo_edge      = Math.abs(even_pct - odd_pct);
-    const eo_bias      = even_count === odd_count || total_count === 0 ? null : even_count > odd_count ? 'even' : 'odd';
 
     // Over 4 = digits 5–9, Under 5 = digits 0–4 (complementary, symmetric barriers)
     const over4_count  = digits.filter(d => d.digit > 4).reduce((s, d) => s + d.count, 0);
     const under5_count = digits.filter(d => d.digit < 5).reduce((s, d) => s + d.count, 0);
     const over_pct     = total_count > 0 ? (over4_count / total_count) * 100 : 0;
     const under_pct    = total_count > 0 ? (under5_count / total_count) * 100 : 0;
-    const ou_edge      = Math.abs(over_pct - under_pct);
-    const ou_bias      = over4_count === under5_count || total_count === 0 ? null : over4_count > under5_count ? 'over' : 'under';
 
-    const sorted       = [...digits].sort((a, b) => b.percentage - a.percentage);
-    const hot_digit    = sorted[0];
-    const cold_digit   = sorted[sorted.length - 1];
-    const hot_dev      = hot_digit.percentage - 10;   // deviation from expected 10%
-    const cold_dev     = 10 - cold_digit.percentage;
+    const hottest_25   = getHottestDigit(digits_25);
+    const hottest_50   = getHottestDigit(digits_50);
     const over_under_pairs = OVER_UNDER_PAIRS.slice(0, 3).map(pair => {
         const over_count = digits
             .filter(digit => digit.digit > pair.over_barrier)
@@ -284,70 +300,65 @@ const DCircles = () => {
                 ))}
             </section>
 
-            {/* ── Bias signals panel ── */}
-            <div className='dcircles__bias-panel'>
-
-                {/* Even / Odd */}
-                <div className={`dcircles__bias-card ${eo_bias === 'even' ? 'dcircles__bias-card--green' : eo_bias === 'odd' ? 'dcircles__bias-card--blue' : 'dcircles__bias-card--neutral'}`}>
-                    <div className='dcircles__bias-icon'>⚖️</div>
-                    <div className='dcircles__bias-body'>
-                        <div className='dcircles__bias-title'>Even / Odd</div>
-                        <div className='dcircles__bias-signal'>
-                            {eo_bias ? `${strengthLabel(eo_edge)} ${eo_bias.toUpperCase()}` : 'Balanced'}
+            {/* ── Summary percentage cards ── */}
+            <section className='dcircles__pairs-panel dcircles__summary-panel' aria-label='Digit summary percentages'>
+                <div className='dcircles__pair-card'>
+                    <div className='dcircles__pair-header'>
+                        <span>Even vs Odd</span>
+                        <span className='dcircles__pair-sample'>{sample_size.toLocaleString()} ticks</span>
+                    </div>
+                    <div className='dcircles__pair-values'>
+                        <div className='dcircles__pair-side dcircles__pair-side--over'>
+                            <span className='dcircles__pair-label'>Even</span>
+                            <strong>{even_pct.toFixed(1)}%</strong>
+                            <span className='dcircles__pair-bar'><span style={{ width: `${even_pct}%` }} /></span>
                         </div>
-                        <div className='dcircles__bias-sub'>
-                            E {even_pct.toFixed(1)}% · O {odd_pct.toFixed(1)}%
-                            {eo_edge > 0.5 && <span className='dcircles__bias-edge'> +{eo_edge.toFixed(1)}%</span>}
+                        <div className='dcircles__pair-side dcircles__pair-side--under'>
+                            <span className='dcircles__pair-label'>Odd</span>
+                            <strong>{odd_pct.toFixed(1)}%</strong>
+                            <span className='dcircles__pair-bar'><span style={{ width: `${odd_pct}%` }} /></span>
                         </div>
                     </div>
                 </div>
 
-                {/* Over / Under */}
-                <div className={`dcircles__bias-card ${ou_bias === 'over' ? 'dcircles__bias-card--green' : ou_bias === 'under' ? 'dcircles__bias-card--red' : 'dcircles__bias-card--neutral'}`}>
-                    <div className='dcircles__bias-icon'>📊</div>
-                    <div className='dcircles__bias-body'>
-                        <div className='dcircles__bias-title'>Over 4 / Under 5</div>
-                        <div className='dcircles__bias-signal'>
-                            {ou_bias ? `${strengthLabel(ou_edge)} ${ou_bias.toUpperCase()}` : 'Balanced'}
+                <div className='dcircles__pair-card'>
+                    <div className='dcircles__pair-header'>
+                        <span>Over 4 vs Under 5</span>
+                        <span className='dcircles__pair-sample'>{sample_size.toLocaleString()} ticks</span>
+                    </div>
+                    <div className='dcircles__pair-values'>
+                        <div className='dcircles__pair-side dcircles__pair-side--over'>
+                            <span className='dcircles__pair-label'>Over 4</span>
+                            <strong>{over_pct.toFixed(1)}%</strong>
+                            <span className='dcircles__pair-bar'><span style={{ width: `${over_pct}%` }} /></span>
                         </div>
-                        <div className='dcircles__bias-sub'>
-                            Ov {over_pct.toFixed(1)}% · Un {under_pct.toFixed(1)}%
-                            {ou_edge > 0.5 && <span className='dcircles__bias-edge'> +{ou_edge.toFixed(1)}%</span>}
+                        <div className='dcircles__pair-side dcircles__pair-side--under'>
+                            <span className='dcircles__pair-label'>Under 5</span>
+                            <strong>{under_pct.toFixed(1)}%</strong>
+                            <span className='dcircles__pair-bar'><span style={{ width: `${under_pct}%` }} /></span>
                         </div>
                     </div>
                 </div>
 
-                {/* Hot digit */}
-                <div className='dcircles__bias-card dcircles__bias-card--hot'>
-                    <div className='dcircles__bias-icon'>🔥</div>
-                    <div className='dcircles__bias-body'>
-                        <div className='dcircles__bias-title'>Hottest Digit</div>
-                        <div className='dcircles__bias-signal' style={{ color: '#16c784' }}>
-                            Digit {hot_digit?.digit ?? '—'}
+                <div className='dcircles__pair-card'>
+                    <div className='dcircles__pair-header'>
+                        <span>Hottest digit</span>
+                        <span className='dcircles__pair-sample'>Independent windows</span>
+                    </div>
+                    <div className='dcircles__pair-values'>
+                        <div className='dcircles__pair-side dcircles__pair-side--hot'>
+                            <span className='dcircles__pair-label'>25 ticks</span>
+                            <strong>Digit {hottest_25?.digit ?? '—'}</strong>
+                            <span className='dcircles__pair-window-pct'>{hottest_25 ? `${hottest_25.percentage.toFixed(1)}%` : '—'}</span>
                         </div>
-                        <div className='dcircles__bias-sub'>
-                            {hot_digit?.percentage.toFixed(2)}%
-                            {hot_dev > 0 && <span className='dcircles__bias-edge' style={{ color: '#16c784' }}> +{hot_dev.toFixed(1)}%</span>}
+                        <div className='dcircles__pair-side dcircles__pair-side--hot'>
+                            <span className='dcircles__pair-label'>50 ticks</span>
+                            <strong>Digit {hottest_50?.digit ?? '—'}</strong>
+                            <span className='dcircles__pair-window-pct'>{hottest_50 ? `${hottest_50.percentage.toFixed(1)}%` : '—'}</span>
                         </div>
                     </div>
                 </div>
-
-                {/* Cold digit */}
-                <div className='dcircles__bias-card dcircles__bias-card--cold'>
-                    <div className='dcircles__bias-icon'>❄️</div>
-                    <div className='dcircles__bias-body'>
-                        <div className='dcircles__bias-title'>Coldest Digit</div>
-                        <div className='dcircles__bias-signal' style={{ color: '#e53935' }}>
-                            Digit {cold_digit?.digit ?? '—'}
-                        </div>
-                        <div className='dcircles__bias-sub'>
-                            {cold_digit?.percentage.toFixed(2)}%
-                            {cold_dev > 0 && <span className='dcircles__bias-edge' style={{ color: '#e53935' }}> -{cold_dev.toFixed(1)}%</span>}
-                        </div>
-                    </div>
-                </div>
-
-            </div>
+            </section>
         </div>
     );
 };

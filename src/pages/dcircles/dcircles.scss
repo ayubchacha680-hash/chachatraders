@@ -309,7 +309,7 @@
         strong {
             color: var(--dc-ink);
             font-family: 'IBM Plex Mono', monospace;
-            font-size: 1.7rem;
+            font-size: 2rem;
             line-height: 1;
         }
 
@@ -318,11 +318,21 @@
 
         &--under .dcircles__pair-label,
         &--under strong { color: #bc332f; }
+
+        &--hot .dcircles__pair-label,
+        &--hot strong { color: #9a7600; }
     }
 
     &__pair-label {
         color: var(--dc-muted);
-        font-size: 1rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
+    &__pair-window-pct {
+        color: var(--dc-muted);
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 1.15rem;
         font-weight: 700;
     }
 

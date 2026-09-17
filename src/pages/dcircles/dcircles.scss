@@ -199,6 +199,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        gap: 0.35rem;
 
         &--active .dcircles__circle {
             transform: scale(1.13);
@@ -234,12 +235,12 @@
     }
 
     &__pct {
-        font-size: 0.78rem;
+        font-size: 1rem;
         font-weight: 900;
-        color: #000;
+        color: var(--dc-ink);
         line-height: 1;
-        letter-spacing: -0.02em;
-        text-shadow: 0 1px 2px rgba(255 255 255 / 55%);
+        letter-spacing: -0.01em;
+        white-space: nowrap;
     }
 
     &__tick {

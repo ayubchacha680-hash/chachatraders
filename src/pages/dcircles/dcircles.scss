@@ -297,9 +297,64 @@
     }
 
     &__pair-values {
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+
+        &--hot {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.9rem;
+        }
+    }
+
+    &__percentage-window {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.9rem;
+        grid-template-columns: 6.6rem 1fr 1fr;
+        align-items: end;
+        gap: 0.7rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #e5ece7;
+    }
+
+    &__window-label {
+        align-self: center;
+        color: var(--dc-muted);
+        font-size: 0.95rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    &__window-side {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 0.15rem;
+
+        strong {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.35rem;
+            line-height: 1;
+        }
+
+        &--left {
+            .dcircles__window-side-label,
+            strong { color: #087c59; }
+        }
+
+        &--right {
+            .dcircles__window-side-label,
+            strong { color: #bc332f; }
+        }
+    }
+
+    &__window-side-label {
+        overflow: hidden;
+        color: var(--dc-muted);
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     &__pair-side {
@@ -354,6 +409,8 @@
 
         .dcircles__pair-side--over & span { background: #16c784; }
         .dcircles__pair-side--under & span { background: #e53935; }
+        &--over span { background: #16c784; }
+        &--under span { background: #e53935; }
     }
 
     /* ── Bias panel ── */

@@ -20,6 +20,78 @@ const getHottestDigit = (stats: TDigitStats[]): TDigitStats | null => {
     return stats.reduce((hottest, digit) => digit.percentage > hottest.percentage ? digit : hottest);
 };
 
+type TWindowPercentages = {
+    left_percentage: number;
+    right_percentage: number;
+};
+
+const getWindowTotal = (stats: TDigitStats[]) =>
+    stats.reduce((total, digit) => total + digit.count, 0);
+
+const getOverUnderPercentages = (
+    stats: TDigitStats[],
+    over_barrier: number,
+    under_barrier: number
+): TWindowPercentages => {
+    const total = getWindowTotal(stats);
+    const over_count = stats
+        .filter(digit => digit.digit > over_barrier)
+        .reduce((sum, digit) => sum + digit.count, 0);
+    const under_count = stats
+        .filter(digit => digit.digit < under_barrier)
+        .reduce((sum, digit) => sum + digit.count, 0);
+
+    return {
+        left_percentage: total > 0 ? (over_count / total) * 100 : 0,
+        right_percentage: total > 0 ? (under_count / total) * 100 : 0,
+    };
+};
+
+const getEvenOddPercentages = (stats: TDigitStats[]): TWindowPercentages => {
+    const total = getWindowTotal(stats);
+    const even_count = stats
+        .filter(digit => digit.digit % 2 === 0)
+        .reduce((sum, digit) => sum + digit.count, 0);
+    const odd_count = total - even_count;
+
+    return {
+        left_percentage: total > 0 ? (even_count / total) * 100 : 0,
+        right_percentage: total > 0 ? (odd_count / total) * 100 : 0,
+    };
+};
+
+type TPercentageWindowRowProps = TWindowPercentages & {
+    window_label: string;
+    left_label: string;
+    right_label: string;
+};
+
+const PercentageWindowRow = ({
+    window_label,
+    left_label,
+    right_label,
+    left_percentage,
+    right_percentage,
+}: TPercentageWindowRowProps) => (
+    <div className='dcircles__percentage-window'>
+        <span className='dcircles__window-label'>{window_label}</span>
+        <div className='dcircles__window-side dcircles__window-side--left'>
+            <span className='dcircles__window-side-label'>{left_label}</span>
+            <strong>{left_percentage.toFixed(1)}%</strong>
+            <span className='dcircles__pair-bar dcircles__pair-bar--over'>
+                <span style={{ width: `${left_percentage}%` }} />
+            </span>
+        </div>
+        <div className='dcircles__window-side dcircles__window-side--right'>
+            <span className='dcircles__window-side-label'>{right_label}</span>
+            <strong>{right_percentage.toFixed(1)}%</strong>
+            <span className='dcircles__pair-bar dcircles__pair-bar--under'>
+                <span style={{ width: `${right_percentage}%` }} />
+            </span>
+        </div>
+    </div>
+);
+
 /* ── Gradient colours per rank ─────────────────────────────────────────── */
 const COLOR_MAP: Record<string, { grad: string; glow: string }> = {
     highest: { grad: 'radial-gradient(circle at 38% 32%, #66ff99 0%, #00cc00 55%, #005500 100%)', glow: '#00cc00' },
@@ -143,35 +215,13 @@ const DCircles = () => {
         reconnecting: 'Reconnecting', closed: 'Disconnected',
     };
 
-    /* ── Derived bias signals ───────────────────────────────────────────── */
-    const total_count  = digits.reduce((s, d) => s + d.count, 0);
-    const even_count   = digits.filter(d => d.digit % 2 === 0).reduce((s, d) => s + d.count, 0);
-    const odd_count    = total_count - even_count;
-    const even_pct     = total_count > 0 ? (even_count / total_count) * 100 : 0;
-    const odd_pct      = total_count > 0 ? (odd_count / total_count) * 100 : 0;
-
-    // Over 4 = digits 5–9, Under 5 = digits 0–4 (complementary, symmetric barriers)
-    const over4_count  = digits.filter(d => d.digit > 4).reduce((s, d) => s + d.count, 0);
-    const under5_count = digits.filter(d => d.digit < 5).reduce((s, d) => s + d.count, 0);
-    const over_pct     = total_count > 0 ? (over4_count / total_count) * 100 : 0;
-    const under_pct    = total_count > 0 ? (under5_count / total_count) * 100 : 0;
-
     const hottest_25   = getHottestDigit(digits_25);
     const hottest_50   = getHottestDigit(digits_50);
-    const over_under_pairs = OVER_UNDER_PAIRS.slice(0, 3).map(pair => {
-        const over_count = digits
-            .filter(digit => digit.digit > pair.over_barrier)
-            .reduce((sum, digit) => sum + digit.count, 0);
-        const under_count = digits
-            .filter(digit => digit.digit < pair.under_barrier)
-            .reduce((sum, digit) => sum + digit.count, 0);
-
-        return {
-            ...pair,
-            over_percentage: total_count > 0 ? (over_count / total_count) * 100 : 0,
-            under_percentage: total_count > 0 ? (under_count / total_count) * 100 : 0,
-        };
-    });
+    const digit_windows = [
+        { label: '1,000 ticks', stats: digits },
+        { label: '50 ticks', stats: digits_50 },
+        { label: '25 ticks', stats: digits_25 },
+    ];
 
     return (
         <div className='dcircles'>
@@ -272,29 +322,22 @@ const DCircles = () => {
 
             {/* ── Over / under probability pairs ── */}
             <section className='dcircles__pairs-panel' aria-label='Over and under percentages'>
-                {over_under_pairs.map(({ over_barrier, under_barrier, over_percentage, under_percentage }) => (
+                {OVER_UNDER_PAIRS.slice(0, 3).map(({ over_barrier, under_barrier }) => (
                     <div className='dcircles__pair-card' key={`${over_barrier}-${under_barrier}`}>
                         <div className='dcircles__pair-header'>
                             <span>Over {over_barrier} vs Under {under_barrier}</span>
-                            <span className='dcircles__pair-sample'>
-                                {sample_size.toLocaleString()} ticks
-                            </span>
+                            <span className='dcircles__pair-sample'>Rolling windows</span>
                         </div>
                         <div className='dcircles__pair-values'>
-                            <div className='dcircles__pair-side dcircles__pair-side--over'>
-                                <span className='dcircles__pair-label'>Over {over_barrier}</span>
-                                <strong>{over_percentage.toFixed(1)}%</strong>
-                                <span className='dcircles__pair-bar'>
-                                    <span style={{ width: `${over_percentage}%` }} />
-                                </span>
-                            </div>
-                            <div className='dcircles__pair-side dcircles__pair-side--under'>
-                                <span className='dcircles__pair-label'>Under {under_barrier}</span>
-                                <strong>{under_percentage.toFixed(1)}%</strong>
-                                <span className='dcircles__pair-bar'>
-                                    <span style={{ width: `${under_percentage}%` }} />
-                                </span>
-                            </div>
+                            {digit_windows.map(({ label, stats }) => (
+                                <PercentageWindowRow
+                                    key={label}
+                                    window_label={label}
+                                    {...getOverUnderPercentages(stats, over_barrier, under_barrier)}
+                                    left_label={`Over ${over_barrier}`}
+                                    right_label={`Under ${under_barrier}`}
+                                />
+                            ))}
                         </div>
                     </div>
                 ))}
@@ -305,38 +348,36 @@ const DCircles = () => {
                 <div className='dcircles__pair-card'>
                     <div className='dcircles__pair-header'>
                         <span>Over 4 vs Under 5</span>
-                        <span className='dcircles__pair-sample'>{sample_size.toLocaleString()} ticks</span>
+                        <span className='dcircles__pair-sample'>Rolling windows</span>
                     </div>
                     <div className='dcircles__pair-values'>
-                        <div className='dcircles__pair-side dcircles__pair-side--over'>
-                            <span className='dcircles__pair-label'>Over 4</span>
-                            <strong>{over_pct.toFixed(1)}%</strong>
-                            <span className='dcircles__pair-bar'><span style={{ width: `${over_pct}%` }} /></span>
-                        </div>
-                        <div className='dcircles__pair-side dcircles__pair-side--under'>
-                            <span className='dcircles__pair-label'>Under 5</span>
-                            <strong>{under_pct.toFixed(1)}%</strong>
-                            <span className='dcircles__pair-bar'><span style={{ width: `${under_pct}%` }} /></span>
-                        </div>
+                        {digit_windows.map(({ label, stats }) => (
+                            <PercentageWindowRow
+                                key={label}
+                                window_label={label}
+                                {...getOverUnderPercentages(stats, 4, 5)}
+                                left_label='Over 4'
+                                right_label='Under 5'
+                            />
+                        ))}
                     </div>
                 </div>
 
                 <div className='dcircles__pair-card'>
                     <div className='dcircles__pair-header'>
                         <span>Even vs Odd</span>
-                        <span className='dcircles__pair-sample'>{sample_size.toLocaleString()} ticks</span>
+                        <span className='dcircles__pair-sample'>Rolling windows</span>
                     </div>
                     <div className='dcircles__pair-values'>
-                        <div className='dcircles__pair-side dcircles__pair-side--over'>
-                            <span className='dcircles__pair-label'>Even</span>
-                            <strong>{even_pct.toFixed(1)}%</strong>
-                            <span className='dcircles__pair-bar'><span style={{ width: `${even_pct}%` }} /></span>
-                        </div>
-                        <div className='dcircles__pair-side dcircles__pair-side--under'>
-                            <span className='dcircles__pair-label'>Odd</span>
-                            <strong>{odd_pct.toFixed(1)}%</strong>
-                            <span className='dcircles__pair-bar'><span style={{ width: `${odd_pct}%` }} /></span>
-                        </div>
+                        {digit_windows.map(({ label, stats }) => (
+                            <PercentageWindowRow
+                                key={label}
+                                window_label={label}
+                                {...getEvenOddPercentages(stats)}
+                                left_label='Even'
+                                right_label='Odd'
+                            />
+                        ))}
                     </div>
                 </div>
 
@@ -345,7 +386,7 @@ const DCircles = () => {
                         <span>Hottest digit</span>
                         <span className='dcircles__pair-sample'>Independent windows</span>
                     </div>
-                    <div className='dcircles__pair-values'>
+                    <div className='dcircles__pair-values dcircles__pair-values--hot'>
                         <div className='dcircles__pair-side dcircles__pair-side--hot'>
                             <span className='dcircles__pair-label'>25 ticks</span>
                             <strong>Digit {hottest_25?.digit ?? '—'}</strong>

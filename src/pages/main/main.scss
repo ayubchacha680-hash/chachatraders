@@ -428,6 +428,19 @@
     visibility: hidden;
     pointer-events: none;
 
+    &__loading {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-general);
+        background: var(--general-main-1);
+        font-size: 1.6rem;
+        pointer-events: none;
+    }
+
     .injectionDiv {
         .blocklyTrash {
             transition: all 0.4s;

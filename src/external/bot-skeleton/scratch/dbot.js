@@ -25,8 +25,12 @@ class DBot {
      * Initialises the workspace and mounts it to a container element (app_contents).
      */
     async initWorkspace(public_path, store, api_helpers_store, is_mobile, is_dark_mode) {
+        // IndexedDB access is independent of Blockly bundle loading. Start
+        // both together so the first Bot Builder render does not wait on them
+        // serially.
+        const recent_files_promise = getSavedWorkspaces();
         await loadBlockly(is_dark_mode);
-        const recent_files = await getSavedWorkspaces();
+        const recent_files = await recent_files_promise;
         this.interpreter = Interpreter();
 
         // eslint-disable-next-line @typescript-eslint/no-this-alias

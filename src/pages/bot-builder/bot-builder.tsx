@@ -27,6 +27,7 @@ const BotBuilder = observer(() => {
     const el_ref = React.useRef<HTMLInputElement | null>(null);
     const is_bot_builder_route = !window.location.hash || window.location.hash === '#bot_builder';
     const is_bot_builder_active = active_tab === DBOT_TABS.BOT_BUILDER && is_bot_builder_route && !is_preview_on_popup;
+    const is_workspace_ready = Boolean(window.Blockly?.derivWorkspace);
 
     // TODO: fix
     // const isMounted = useIsMounted();
@@ -121,8 +122,14 @@ const BotBuilder = observer(() => {
                     'bot-builder--tour-active': active_tour,
                 })}
                 aria-hidden={!is_bot_builder_active}
+                aria-busy={is_bot_builder_active && (is_loading || !is_workspace_ready)}
             >
                 <div id='scratch_div' ref={el_ref}>
+                    {is_bot_builder_active && (is_loading || !is_workspace_ready) && (
+                        <div className='bot-builder__loading' role='status'>
+                            {localize('Loading Bot Builder...')}
+                        </div>
+                    )}
                     <WorkspaceWrapper />
                 </div>
             </div>

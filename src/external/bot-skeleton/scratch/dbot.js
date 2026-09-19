@@ -348,6 +348,9 @@ class DBot {
                 BinaryBotPrivateTickAnalysis();
                 BinaryBotPrivateRun(BinaryBotPrivateStart);
                 if (!BinaryBotPrivateHasCalledTradeOptions) {
+                    // Fast Mode uses a zero-delay yield so the next available
+                    // tick is processed immediately. Normal Mode keeps the
+                    // existing one-second pacing between trade-option checks.
                     sleep(Bot.getTradeOptionsPollingDelay());
                     continue;
                 }

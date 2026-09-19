@@ -1,4 +1,6 @@
 export const FAST_MODE_SESSION_KEY = 'dbot_fast_mode';
+export const FAST_MODE_POLLING_DELAY_SECONDS = 0;
+export const NORMAL_MODE_POLLING_DELAY_SECONDS = 1;
 
 let cached_fast_mode: boolean | undefined;
 
@@ -21,4 +23,5 @@ export const setFastModeEnabled = (is_enabled: boolean): void => {
     }
 };
 
-export const getTradeOptionsPollingDelay = (): number => (isFastModeEnabled() ? 0 : 1);
+export const getTradeOptionsPollingDelay = (): number =>
+    isFastModeEnabled() ? FAST_MODE_POLLING_DELAY_SECONDS : NORMAL_MODE_POLLING_DELAY_SECONDS;

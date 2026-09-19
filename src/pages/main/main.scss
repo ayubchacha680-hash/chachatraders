@@ -453,6 +453,9 @@
     &--inactive {
         visibility: hidden;
         pointer-events: none;
+        // Keep the Blockly engine mounted, but guarantee its visual controls
+        // cannot participate in layout or paint over another main tab.
+        opacity: 0;
     }
 
     @include mobile-or-tablet-screen {

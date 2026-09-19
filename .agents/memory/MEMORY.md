@@ -3,3 +3,4 @@
 - [Blockly startup ordering](blockly-startup-ordering.md) — workspace startup must tolerate API engine stores arriving after React mounts the Bot Builder host.
 - [Programmatic Blockly imports](programmatic-blockly-imports.md) — library bots use compatibility conversion and async workspace loading without file-import history side effects.
 - [Dynamic cycle purchases](dynamic-cycle-purchases.md) — runtime-switching digit contracts must use guarded direct buys, not stale family-specific proposal subscriptions.
+- [Main tab and builder visibility](main-tab-builder-visibility.md) — the globally mounted Blockly builder must be gated by both active tab state and URL hash during tab transitions.

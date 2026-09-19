@@ -4,6 +4,7 @@ import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { botNotification } from '@/components/bot-notification/bot-notification';
 import { notification_message } from '@/components/bot-notification/bot-notification-utils';
+import { DBOT_TABS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
 import { localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
@@ -24,6 +25,8 @@ const BotBuilder = observer(() => {
     const { isDesktop } = useDevice();
     const { onMount, onUnmount } = app;
     const el_ref = React.useRef<HTMLInputElement | null>(null);
+    const is_bot_builder_route = !window.location.hash || window.location.hash === '#bot_builder';
+    const is_bot_builder_active = active_tab === DBOT_TABS.BOT_BUILDER && is_bot_builder_route && !is_preview_on_popup;
 
     // TODO: fix
     // const isMounted = useIsMounted();
@@ -113,10 +116,11 @@ const BotBuilder = observer(() => {
         <>
             <div
                 className={classNames('bot-builder', {
-                    'bot-builder--active': active_tab === 1 && !is_preview_on_popup,
-                    'bot-builder--inactive': active_tab !== 1 || is_preview_on_popup,
+                    'bot-builder--active': is_bot_builder_active,
+                    'bot-builder--inactive': !is_bot_builder_active,
                     'bot-builder--tour-active': active_tour,
                 })}
+                aria-hidden={!is_bot_builder_active}
             >
                 <div id='scratch_div' ref={el_ref}>
                     <WorkspaceWrapper />

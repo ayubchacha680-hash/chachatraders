@@ -470,21 +470,19 @@ const FreeBots = observer(() => {
         bot: TBot,
         run_after_load: boolean,
         attempts_left = 24
-    ) => {
+    ): Promise<boolean> => {
         const B = (window as any).Blockly;
         const workspace = B?.derivWorkspace;
 
         if (!workspace || !B?.Xml) {
             if (attempts_left > 0) {
-                window.setTimeout(
-                    () => loadXmlWhenWorkspaceIsReady(xml, bot, run_after_load, attempts_left - 1),
-                    250
-                );
+                await new Promise(resolve => window.setTimeout(resolve, 250));
+                return loadXmlWhenWorkspaceIsReady(xml, bot, run_after_load, attempts_left - 1);
             } else {
                 setLoadingId(null);
                 setLoadError('Bot Builder workspace did not finish loading. Please try again.');
+                return false;
             }
-            return;
         }
 
         try {
@@ -510,13 +508,15 @@ const FreeBots = observer(() => {
             if (run_after_load) {
                 window.setTimeout(() => run_panel.onRunButtonClick(), 100);
             }
+            return true;
         } catch (err) {
             setLoadingId(null);
             setLoadError(`Failed to load bot: ${(err as Error).message ?? err}`);
+            return false;
         }
     };
 
-    const loadBot = (bot: TBot, run_after_load = false) => {
+    const loadBot = async (bot: TBot, run_after_load = false) => {
         if (
             run_after_load &&
             !window.confirm(
@@ -549,11 +549,10 @@ const FreeBots = observer(() => {
             return;
         }
 
-        // Switch to bot builder
-        dashboard.setActiveTab(DBOT_TABS.BOT_BUILDER);
-
-        // Bot Builder is lazy-loaded; wait until its Blockly workspace exists.
-        window.setTimeout(() => loadXmlWhenWorkspaceIsReady(xml, bot, run_after_load), 250);
+        // Load into the persistent Blockly workspace before switching tabs. This
+        // keeps the Bot Builder ready to display immediately when selected.
+        const loaded = await loadXmlWhenWorkspaceIsReady(xml, bot, run_after_load);
+        if (loaded) dashboard.setActiveTab(DBOT_TABS.BOT_BUILDER);
     };
 
     const downloadBot = (bot: TBot) => {

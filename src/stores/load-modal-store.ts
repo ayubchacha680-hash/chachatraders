@@ -498,7 +498,7 @@ export default class LoadModalStore {
 
         return this.loadStrategyToBuilder(
             {
-                id: strategy_id,
+                id: strategy_id || window.Blockly.utils.idGenerator.genUid(),
                 name: file_name,
                 xml,
                 save_type: from,

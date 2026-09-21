@@ -98,8 +98,8 @@ const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {
     };
 
     const handleOpen = async () => {
-        await loadFileFromRecent();
-        setActiveTab(DBOT_TABS.BOT_BUILDER);
+        const loaded = await loadFileFromRecent();
+        if (loaded) setActiveTab(DBOT_TABS.BOT_BUILDER);
         /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
         /* [/AI] */
     };

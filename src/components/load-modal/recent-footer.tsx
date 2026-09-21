@@ -14,7 +14,8 @@ const RecentFooter = observer(() => {
         <Button
             text={localize('Open')}
             onClick={async () => {
-                await loadStrategyOnBotBuilder();
+                const loaded = await loadStrategyOnBotBuilder();
+                if (!loaded) return;
                 toggleLoadModal();
                 setOpenSettings(NOTIFICATION_TYPE.BOT_IMPORT);
             }}

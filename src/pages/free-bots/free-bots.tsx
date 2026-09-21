@@ -503,6 +503,10 @@ const FreeBots = observer(() => {
             }
             workspace.clearUndo();
             workspace.current_strategy_id = B.utils.idGenerator.genUid();
+            workspace.strategy_to_load = B.Xml.domToText(dom);
+            if (!workspace.getTopBlocks(false).length) {
+                throw new Error('The bot loaded without any blocks.');
+            }
             setLoadedId(bot.id);
             setLoadingId(null);
             if (run_after_load) {

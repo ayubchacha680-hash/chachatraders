@@ -28,7 +28,8 @@ const LocalFooter = observer(() => {
             <Button
                 text={localize('Open')}
                 onClick={async () => {
-                    await loadStrategyOnBotBuilder();
+                    const loaded = await loadStrategyOnBotBuilder();
+                    if (!loaded) return;
                     await saveStrategyToLocalStorage();
                     setLoadedLocalFile(null);
                     toggleLoadModal();

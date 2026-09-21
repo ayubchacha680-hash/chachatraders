@@ -289,19 +289,34 @@ export default class LoadModalStore {
     };
 
     loadStrategyToBuilder = async (strategy: TStrategy, is_show_notification: boolean = true) => {
-        if (strategy?.id) {
-            await load({
-                block_string: strategy.xml,
-                strategy_id: strategy.id,
-                file_name: strategy.name,
-                workspace: window.Blockly?.derivWorkspace,
-                from: strategy.save_type,
-                drop_event: {},
-                showIncompatibleStrategyDialog: false,
-                show_snackbar: is_show_notification,
-            });
-            window.Blockly.derivWorkspace.strategy_to_load = strategy.xml;
+        if (!strategy?.id) return false;
+
+        const workspace = await this.waitForBuilderWorkspace();
+        if (!workspace) return false;
+
+        const result = await load({
+            block_string: strategy.xml,
+            strategy_id: strategy.id,
+            file_name: strategy.name,
+            workspace,
+            from: strategy.save_type,
+            drop_event: {},
+            showIncompatibleStrategyDialog: false,
+            show_snackbar: is_show_notification,
+        });
+
+        if (result?.error || !workspace.getTopBlocks(false).length) return false;
+        workspace.strategy_to_load = strategy.xml;
+        return true;
+    };
+
+    waitForBuilderWorkspace = async (attempts = 40) => {
+        for (let attempt = 0; attempt < attempts; attempt++) {
+            const workspace = window.Blockly?.derivWorkspace;
+            if (workspace && window.Blockly?.Xml) return workspace;
+            await new Promise(resolve => setTimeout(resolve, 100));
         }
+        return null;
     };
 
     refreshStrategiesTheme = async () => {
@@ -322,34 +337,36 @@ export default class LoadModalStore {
 
     loadFileFromRecent = async () => {
         this.is_open_button_loading = true;
-        if (!this.selected_strategy) {
-            window.Blockly.derivWorkspace.asyncClear();
-            window.Blockly.Xml.domToWorkspace(
-                window.Blockly.utils.xml.textToDom(window.Blockly.derivWorkspace.strategy_to_load),
-                window.Blockly.derivWorkspace
-            );
-            this.is_open_button_loading = false;
-            return;
-        }
+        try {
+            const workspace = await this.waitForBuilderWorkspace();
+            if (!workspace) return false;
 
-        removeExistingWorkspace(this.selected_strategy.id);
-        await load({
-            block_string: this.selected_strategy?.xml,
-            strategy_id: this.selected_strategy.id,
-            file_name: this.selected_strategy.name,
-            workspace: window.Blockly.derivWorkspace,
-            from: this.selected_strategy.save_type,
-            drop_event: {},
-            showIncompatibleStrategyDialog: false,
-        });
-        const recent_files = await getSavedWorkspaces();
-        recent_files.map((strategy: TStrategy) => {
-            const { xml, id } = strategy;
-            if (this.selected_strategy.id === id) {
-                window.Blockly.derivWorkspace.strategy_to_load = xml;
+            if (!this.selected_strategy) {
+                await workspace.asyncClear();
+                window.Blockly.Xml.domToWorkspace(
+                    window.Blockly.utils.xml.textToDom(workspace.strategy_to_load),
+                    workspace
+                );
+                return workspace.getTopBlocks(false).length > 0;
             }
-        });
-        this.is_open_button_loading = false;
+
+            removeExistingWorkspace(this.selected_strategy.id);
+            const result = await load({
+                block_string: this.selected_strategy.xml,
+                strategy_id: this.selected_strategy.id,
+                file_name: this.selected_strategy.name,
+                workspace,
+                from: this.selected_strategy.save_type,
+                drop_event: {},
+                showIncompatibleStrategyDialog: false,
+            });
+            if (result?.error || !workspace.getTopBlocks(false).length) return false;
+
+            workspace.strategy_to_load = this.selected_strategy.xml;
+            return true;
+        } finally {
+            this.is_open_button_loading = false;
+        }
     };
 
     loadFileFromLocal = (): void => {
@@ -465,20 +482,29 @@ export default class LoadModalStore {
     };
 
     loadStrategyOnBotBuilder = async () => {
+        const workspace = await this.waitForBuilderWorkspace();
+        const xml_values = window.Blockly?.xmlValues;
+        if (!workspace || !xml_values) return false;
+
         const {
             strategy_id = window.Blockly.utils.idGenerator.genUid(),
             convertedDom,
             block_string,
-        } = window.Blockly.xmlValues;
-        const derivWorkspace = window.Blockly.derivWorkspace;
+            file_name = localize('Imported bot'),
+            from = save_types.LOCAL,
+        } = xml_values;
+        const xml = block_string || window.Blockly.Xml.domToText(convertedDom);
+        if (!xml) return false;
 
-        window.Blockly.Xml.clearWorkspaceAndLoadFromXml(convertedDom, derivWorkspace);
-        derivWorkspace.cleanUp();
-        derivWorkspace.clearUndo();
-        derivWorkspace.current_strategy_id = strategy_id;
-
-        /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
-        /* [/AI] */
+        return this.loadStrategyToBuilder(
+            {
+                id: strategy_id,
+                name: file_name,
+                xml,
+                save_type: from,
+            },
+            false
+        );
     };
 
     updateXmlValuesOnStrategySelection = () => {

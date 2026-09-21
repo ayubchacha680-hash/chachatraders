@@ -124,7 +124,6 @@ function assignColors(digits: TDigitStats[]): Record<number, { grad: string; glo
 const DCircles = () => {
     const [symbol, setSymbol]               = useState('R_100');
     const [digits, setDigits]               = useState<TDigitStats[]>(emptyDigitStats());
-    const [digits_100, setDigits100]        = useState<TDigitStats[]>(emptyDigitStats());
     const [digits_25, setDigits25]          = useState<TDigitStats[]>(emptyDigitStats());
     const [digits_50, setDigits50]          = useState<TDigitStats[]>(emptyDigitStats());
     const [current_digit, setCurrentDigit]  = useState<number | null>(null);
@@ -135,7 +134,6 @@ const DCircles = () => {
     const [pip_size, setPipSize]            = useState(2);
 
     const window_ref = useRef(new RollingDigitWindow(WINDOW_SIZE));
-    const window_100_ref = useRef(new RollingDigitWindow(100));
     const window_25_ref = useRef(new RollingDigitWindow(25));
     const window_50_ref = useRef(new RollingDigitWindow(50));
     const frame_ref  = useRef<number | null>(null);
@@ -143,15 +141,12 @@ const DCircles = () => {
     /* subscribe to tick stream */
     useEffect(() => {
         const win = window_ref.current;
-        const win_100 = window_100_ref.current;
         const win_25 = window_25_ref.current;
         const win_50 = window_50_ref.current;
         win.reset();
-        win_100.reset();
         win_25.reset();
         win_50.reset();
         setDigits(emptyDigitStats());
-        setDigits100(emptyDigitStats());
         setDigits25(emptyDigitStats());
         setDigits50(emptyDigitStats());
         setCurrentDigit(null);
@@ -166,15 +161,12 @@ const DCircles = () => {
                 setPipSize(ps);
                 const history_digits = prices.map(p => getLastDigit(p, ps));
                 win.seed(history_digits, prices);
-                win_100.seed(history_digits, prices);
                 win_25.seed(history_digits, prices);
                 win_50.seed(history_digits, prices);
                 const snap = win.snapshot();
-                const snap_100 = win_100.snapshot();
                 const snap_25 = win_25.snapshot();
                 const snap_50 = win_50.snapshot();
                 setDigits(snap.digits);
-                setDigits100(snap_100.digits);
                 setDigits25(snap_25.digits);
                 setDigits50(snap_50.digits);
                 setSampleSize(snap.sample_size);
@@ -186,7 +178,6 @@ const DCircles = () => {
                 setPipSize(tick.pip_size);
                 const d = getLastDigit(tick.quote, tick.pip_size);
                 win.push(d, tick.quote);
-                win_100.push(d, tick.quote);
                 win_25.push(d, tick.quote);
                 win_50.push(d, tick.quote);
                 setCurrentDigit(d);
@@ -195,11 +186,9 @@ const DCircles = () => {
                 frame_ref.current = requestAnimationFrame(() => {
                     frame_ref.current = null;
                     const snap = win.snapshot();
-                    const snap_100 = win_100.snapshot();
                     const snap_25 = win_25.snapshot();
                     const snap_50 = win_50.snapshot();
                     setDigits(snap.digits);
-                    setDigits100(snap_100.digits);
                     setDigits25(snap_25.digits);
                     setDigits50(snap_50.digits);
                     setSampleSize(snap.sample_size);
@@ -228,10 +217,8 @@ const DCircles = () => {
 
     const hottest_25   = getHottestDigit(digits_25);
     const hottest_50   = getHottestDigit(digits_50);
-    const hottest_100  = getHottestDigit(digits_100);
     const digit_windows = [
         { label: '1,000 ticks', stats: digits },
-        { label: '100 ticks', stats: digits_100 },
         { label: '50 ticks', stats: digits_50 },
         { label: '25 ticks', stats: digits_25 },
     ];
@@ -400,11 +387,6 @@ const DCircles = () => {
                         <span className='dcircles__pair-sample'>Independent windows</span>
                     </div>
                     <div className='dcircles__pair-values dcircles__pair-values--hot'>
-                        <div className='dcircles__pair-side dcircles__pair-side--hot'>
-                            <span className='dcircles__pair-label'>100 ticks</span>
-                            <strong>Digit {hottest_100?.digit ?? '—'}</strong>
-                            <span className='dcircles__pair-window-pct'>{hottest_100 ? `${hottest_100.percentage.toFixed(1)}%` : '—'}</span>
-                        </div>
                         <div className='dcircles__pair-side dcircles__pair-side--hot'>
                             <span className='dcircles__pair-label'>50 ticks</span>
                             <strong>Digit {hottest_50?.digit ?? '—'}</strong>

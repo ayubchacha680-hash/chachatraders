@@ -80,7 +80,7 @@
     "@babel/preset-typescript": "^7.24.1",
     "@deriv/api-types": "^1.0.2463",
     "@jest/globals": "^29.7.0",
-    "@rsbuild/core": "^1.0.1-beta.1",
+    "@rsbuild/core": "^1.7.6",
     "@rsbuild/plugin-react": "^1.0.1-beta.1",
     "@rsbuild/plugin-sass": "^1.0.1-beta.1",
     "@testing-library/dom": "^10.3.1",

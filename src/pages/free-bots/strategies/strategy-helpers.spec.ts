@@ -45,6 +45,7 @@ describe('free bot strategy helpers', () => {
             expect(document.querySelector('field[name="CURRENCY_LIST"]')?.textContent).toBe('EUR');
             expect(document.querySelector('block[type="before_purchase"] block[type="free_bot_purchase"]')).not.toBeNull();
             expect(document.querySelector('block[type="after_purchase"] block[type="trade_again"]')).not.toBeNull();
+            expect(document.querySelector('comment[id]')).not.toBeNull();
         });
         const contractSequence = (xml: string) =>
             Array.from(new DOMParser().parseFromString(xml, 'text/xml').querySelectorAll('block[type="free_bot_purchase"] > field[name="PURCHASE_LIST"]'))

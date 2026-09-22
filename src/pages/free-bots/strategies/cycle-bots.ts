@@ -109,7 +109,7 @@ const sixStepCycleXml = (settings: TCycleBotSettings, name: string, steps: TCycl
 <statement name="INITIALIZATION">${chain(set('stake', 'cycle:stake', number(settings.stake)), set('initial', 'cycle:initial', number(settings.stake)), set('mult', 'cycle:multiplier', number(settings.multiplier)), set('step', 'cycle:step', number(0)), set('recovery', 'cycle:recovery pending', bool(false)))}</statement></block>
 <block type="before_purchase" id="before" x="0" y="560"><statement name="BEFOREPURCHASE_STACK">${before_purchase}</statement></block>
 <block type="after_purchase" id="after" x="520" y="560"><statement name="AFTERPURCHASE_STACK">${withNext(after_result, '<block type="trade_again"/>')}</statement></block>
-<comment pinned="false" h="70" w="360">${name}: ${steps.map(item => item.contract.replace('DIGIT', '') + (item.prediction ?? '')).join(' → ')}. A loss triggers exactly one latest-digit Even/Odd recovery trade.</comment></xml>`;
+<comment id="free-bot-cycle-comment" pinned="false" h="70" w="360">${name}: ${steps.map(item => item.contract.replace('DIGIT', '') + (item.prediction ?? '')).join(' → ')}. A loss triggers exactly one latest-digit Even/Odd recovery trade.</comment></xml>`;
 };
 
 export const chachaOverCycleXml = (settings: TCycleBotSettings) =>
@@ -218,5 +218,5 @@ export const over2KillerXml = (settings: TKillerSettings) => {
 <block type="tick_analysis" id="killer_ticks" x="0" y="500"><statement name="TICKANALYSIS_STACK">${chain(settle_virtual, detect_signal)}</statement></block>
 <block type="before_purchase" id="killer_before" x="0" y="760"><statement name="BEFOREPURCHASE_STACK">${entry}</statement></block>
 <block type="after_purchase" id="killer_after" x="520" y="600"><statement name="AFTERPURCHASE_STACK">${after_purchase}</statement></block>
-<comment pinned="false" h="70" w="300">Over 2 Killer: ${settings.confirmation} below-3 digits then a digit over 2. VH ${settings.vh_enabled ? `simulates ${settings.vh_target} losses before the next real entry` : 'disabled'}; TP/SL gate the real-trade loop.</comment></xml>`;
+<comment id="free-bot-killer-comment" pinned="false" h="70" w="300">Over 2 Killer: ${settings.confirmation} below-3 digits then a digit over 2. VH ${settings.vh_enabled ? `simulates ${settings.vh_target} losses before the next real entry` : 'disabled'}; TP/SL gate the real-trade loop.</comment></xml>`;
 };

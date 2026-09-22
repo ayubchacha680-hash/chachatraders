@@ -5,6 +5,7 @@ A visual trading-bot builder on the Deriv WebSocket API. Drag-and-drop strategy 
 ## Stack
 
 - **Frontend:** React + TypeScript, Rsbuild (not Next.js)
+- **Runtime:** Node.js 22+
 - **Charts:** `@deriv-com/smartcharts-champion`
 - **Strategy editor:** Blockly
 - **Styling:** SASS + CSS variables (generated from `brand.config.json`)

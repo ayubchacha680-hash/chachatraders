@@ -9,6 +9,7 @@ import {
     save_types,
     saveWorkspaceToRecent,
 } from '@/external/bot-skeleton';
+import { DBOT_TABS } from '@/constants/bot-contents';
 import { inject_workspace_options, updateXmlValues } from '@/external/bot-skeleton/scratch/utils';
 import { isDbotRTL } from '@/external/bot-skeleton/utils/workspace';
 import { TStores } from '@deriv/stores/types';
@@ -190,8 +191,8 @@ export default class LoadModalStore {
             showIncompatibleStrategyDialog: null,
         });
 
-        const { active_tab } = this.root_store.dashboard;
-        if (active_tab === 1) this.toggleLoadModal();
+        this.toggleLoadModal();
+        this.root_store.dashboard.setActiveTab(DBOT_TABS.BOT_BUILDER);
 
         this.root_store.dashboard.is_dialog_open = false;
     };

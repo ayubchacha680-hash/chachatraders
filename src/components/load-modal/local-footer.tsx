@@ -1,6 +1,7 @@
 import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { NOTIFICATION_TYPE } from '@/components/bot-notification/bot-notification-utils';
+import { DBOT_TABS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
 import { localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
@@ -16,7 +17,7 @@ const LocalFooter = observer(() => {
         saveStrategyToLocalStorage,
         toggleLoadModal,
     } = load_modal;
-    const { setOpenSettings, setPreviewOnPopup } = dashboard;
+    const { setActiveTab, setOpenSettings, setPreviewOnPopup } = dashboard;
     const { isDesktop } = useDevice();
     const Wrapper = isDesktop ? React.Fragment : Button.Group;
 
@@ -35,6 +36,7 @@ const LocalFooter = observer(() => {
                     toggleLoadModal();
                     setPreviewOnPopup(false);
                     setOpenSettings(NOTIFICATION_TYPE.BOT_IMPORT);
+                    setActiveTab(DBOT_TABS.BOT_BUILDER);
                 }}
                 is_loading={is_open_button_loading}
                 has_effect

@@ -5,9 +5,11 @@ import { observer } from 'mobx-react-lite';
 import { botNotification } from '@/components/bot-notification/bot-notification';
 import { notification_message } from '@/components/bot-notification/bot-notification-utils';
 import { DBOT_TABS } from '@/constants/bot-contents';
+import { onWorkspaceResize } from '@/external/bot-skeleton';
 import { useStore } from '@/hooks/useStore';
 import { localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
+import { useLocation } from 'react-router-dom';
 import { TBlocklyEvents } from 'Types';
 import LoadModal from '../../components/load-modal';
 import SaveModal from '../dashboard/bot-list/save-modal';
@@ -25,7 +27,8 @@ const BotBuilder = observer(() => {
     const { isDesktop } = useDevice();
     const { onMount, onUnmount } = app;
     const el_ref = React.useRef<HTMLInputElement | null>(null);
-    const is_bot_builder_route = !window.location.hash || window.location.hash === '#bot_builder';
+    const location = useLocation();
+    const is_bot_builder_route = !location.hash || location.hash === '#bot_builder';
     const is_bot_builder_active = active_tab === DBOT_TABS.BOT_BUILDER && is_bot_builder_route && !is_preview_on_popup;
     const is_workspace_ready = Boolean(window.Blockly?.derivWorkspace);
 
@@ -55,6 +58,17 @@ const BotBuilder = observer(() => {
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [is_running]);
+
+    React.useEffect(() => {
+        if (!is_bot_builder_active || !window.Blockly?.derivWorkspace) return;
+
+        const resize_frame = window.requestAnimationFrame(() => {
+            onWorkspaceResize();
+            window.Blockly?.derivWorkspace?.render?.();
+        });
+
+        return () => window.cancelAnimationFrame(resize_frame);
+    }, [is_bot_builder_active]);
 
     const handleBlockChangeOnBotRun = (e: Event) => {
         const { is_reset_button_clicked } = toolbar;

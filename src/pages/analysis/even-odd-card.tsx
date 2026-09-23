@@ -8,7 +8,18 @@ type TEvenOddCardProps = {
 };
 
 const EvenOddCard = ({ stats, sample_size }: TEvenOddCardProps) => {
-    const { even_percentage, odd_percentage, even_count, odd_count, bias, bias_edge } = stats;
+    const {
+        even_percentage,
+        odd_percentage,
+        even_count,
+        odd_count,
+        bias,
+        bias_edge,
+        even_entry_digit,
+        odd_entry_digit,
+        entry_ticks,
+    } = stats;
+    const ticks_until_update = 10 - entry_ticks;
 
     return (
         <section className='analysis-card'>
@@ -29,6 +40,10 @@ const EvenOddCard = ({ stats, sample_size }: TEvenOddCardProps) => {
                     <Text as='span' size='xxs' color='less-prominent'>
                         <Localize i18n_default_text='Even' />
                     </Text>
+                    <span className='analysis-card__entry-point'>
+                        <span>Entry digit</span>
+                        <strong>{even_entry_digit ?? '—'}</strong>
+                    </span>
                     <Text as='span' size='l' weight='bold' color='prominent'>
                         {even_percentage.toFixed(2)}%
                     </Text>
@@ -40,6 +55,10 @@ const EvenOddCard = ({ stats, sample_size }: TEvenOddCardProps) => {
                     <Text as='span' size='xxs' color='less-prominent'>
                         <Localize i18n_default_text='Odd' />
                     </Text>
+                    <span className='analysis-card__entry-point'>
+                        <span>Entry digit</span>
+                        <strong>{odd_entry_digit ?? '—'}</strong>
+                    </span>
                     <Text as='span' size='l' weight='bold' color='prominent'>
                         {odd_percentage.toFixed(2)}%
                     </Text>
@@ -58,6 +77,10 @@ const EvenOddCard = ({ stats, sample_size }: TEvenOddCardProps) => {
                     className='analysis-card__bar-fill analysis-card__bar-fill--odd'
                     style={{ flexGrow: odd_percentage }}
                 />
+            </div>
+
+            <div className='analysis-card__entry-refresh'>
+                10-tick monitor · next update in {ticks_until_update} tick{ticks_until_update === 1 ? '' : 's'}
             </div>
 
             <Text as='p' size='xxs' color='general' className='analysis-card__verdict'>

@@ -9,8 +9,20 @@ type TOverUnderCardProps = {
 };
 
 const OverUnderCard = ({ stats, is_best_overall }: TOverUnderCardProps) => {
-    const { over_barrier, under_barrier, over_percentage, under_percentage, over_count, under_count, best_side, edge } =
-        stats;
+    const {
+        over_barrier,
+        under_barrier,
+        over_percentage,
+        under_percentage,
+        over_count,
+        under_count,
+        best_side,
+        edge,
+        over_entry_digit,
+        under_entry_digit,
+        entry_ticks,
+    } = stats;
+    const ticks_until_update = 10 - entry_ticks;
 
     return (
         <section
@@ -35,6 +47,10 @@ const OverUnderCard = ({ stats, is_best_overall }: TOverUnderCardProps) => {
                     <Text as='span' size='xxs' color='less-prominent'>
                         <Localize i18n_default_text='Over {{over_barrier}}' values={{ over_barrier }} />
                     </Text>
+                    <span className='analysis-card__entry-point'>
+                        <span>Entry digit</span>
+                        <strong>{over_entry_digit ?? '—'}</strong>
+                    </span>
                     <Text as='span' size='m' weight='bold' color='prominent'>
                         {over_percentage.toFixed(2)}%
                     </Text>
@@ -46,6 +62,10 @@ const OverUnderCard = ({ stats, is_best_overall }: TOverUnderCardProps) => {
                     <Text as='span' size='xxs' color='less-prominent'>
                         <Localize i18n_default_text='Under {{under_barrier}}' values={{ under_barrier }} />
                     </Text>
+                    <span className='analysis-card__entry-point'>
+                        <span>Entry digit</span>
+                        <strong>{under_entry_digit ?? '—'}</strong>
+                    </span>
                     <Text as='span' size='m' weight='bold' color='prominent'>
                         {under_percentage.toFixed(2)}%
                     </Text>
@@ -64,6 +84,10 @@ const OverUnderCard = ({ stats, is_best_overall }: TOverUnderCardProps) => {
                     className='analysis-card__bar-fill analysis-card__bar-fill--under'
                     style={{ flexGrow: under_percentage }}
                 />
+            </div>
+
+            <div className='analysis-card__entry-refresh'>
+                10-tick monitor · next update in {ticks_until_update} tick{ticks_until_update === 1 ? '' : 's'}
             </div>
 
             <Text as='p' size='xxs' color='general' className='analysis-card__verdict'>

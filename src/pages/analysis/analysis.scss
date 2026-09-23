@@ -48,6 +48,32 @@
     }
 
     &__verdict { margin: 0; }
+
+    &__entry-point {
+        display: flex;
+        align-items: baseline;
+        gap: 0.4rem;
+        margin-top: 0.15rem;
+
+        span {
+            color: var(--text-less-prominent);
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        strong {
+            color: var(--text-prominent);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.5rem;
+        }
+    }
+
+    &__entry-refresh {
+        color: var(--text-less-prominent);
+        font-size: 1rem;
+        text-align: right;
+    }
 }
 
 .analysis-side {

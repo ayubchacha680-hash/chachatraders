@@ -86,6 +86,34 @@ describe('RollingDigitWindow', () => {
         expect(by_barrier[4]).toMatchObject({ over_count: 5, under_count: 5, over_percentage: 50 });
     });
 
+    it('commits entry-point digits only after each 10-tick block', () => {
+        const window = new RollingDigitWindow(30);
+        pushAll(window, [2, 0, 3, 1, 4, 5, 6, 7, 8, 9]);
+
+        const first_block = window.snapshot();
+        expect(first_block.even_odd).toMatchObject({
+            even_entry_digit: 8,
+            odd_entry_digit: 9,
+            entry_ticks: 0,
+        });
+        expect(first_block.over_under[0]).toMatchObject({
+            over_entry_digit: 9,
+            under_entry_digit: 7,
+        });
+
+        pushAll(window, [2, 2, 2, 2, 2, 2, 2, 2, 2]);
+        expect(window.snapshot().over_under[0].over_entry_digit).toBe(9);
+        expect(window.snapshot().even_odd.entry_ticks).toBe(9);
+
+        window.push(7);
+        const second_block = window.snapshot();
+        expect(second_block.even_odd.even_entry_digit).toBe(2);
+        expect(second_block.even_odd.odd_entry_digit).toBe(7);
+        expect(second_block.over_under[0].over_entry_digit).toBe(7);
+        expect(second_block.over_under[0].under_entry_digit).toBe(7);
+        expect(second_block.even_odd.entry_ticks).toBe(0);
+    });
+
     it('picks the side of each pair with the higher share', () => {
         const window = new RollingDigitWindow(4);
         pushAll(window, [8, 9, 9, 0]);

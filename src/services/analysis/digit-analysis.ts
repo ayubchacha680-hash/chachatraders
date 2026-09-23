@@ -7,6 +7,11 @@ export type TEvenOddStats = {
     odd_percentage: number;
     bias: 'even' | 'odd' | null;
     bias_edge: number;
+    /** Most recent qualifying digit committed by the 10-tick entry monitor. */
+    even_entry_digit: number | null;
+    odd_entry_digit: number | null;
+    /** Number of live ticks collected since the last entry-point refresh. */
+    entry_ticks: number;
 };
 
 export type TOverUnderStats = TOverUnderPair & {
@@ -16,6 +21,11 @@ export type TOverUnderStats = TOverUnderPair & {
     under_percentage: number;
     best_side: 'over' | 'under' | null;
     edge: number;
+    /** Most recent qualifying digit committed by the 10-tick entry monitor. */
+    over_entry_digit: number | null;
+    under_entry_digit: number | null;
+    /** Number of live ticks collected since the last entry-point refresh. */
+    entry_ticks: number;
 };
 
 export type TDigitStats = {
@@ -116,6 +126,22 @@ export class RollingDigitWindow {
     private streak = 0;
     private last_rf_mv: -1 | 0 | 1 | null = null;
 
+    /**
+     * Entry points are deliberately block-based. A qualifying digit is held as
+     * a candidate while the next ten ticks arrive; only then is it committed
+     * to the snapshot. This prevents the entry marker from jumping on every
+     * tick while still tracking each side independently.
+     */
+    private entry_ticks = 0;
+    private readonly pending_over_entries: Array<number | null> = new Array(OVER_UNDER_PAIRS.length).fill(null);
+    private readonly pending_under_entries: Array<number | null> = new Array(OVER_UNDER_PAIRS.length).fill(null);
+    private readonly over_entry_digits: Array<number | null> = new Array(OVER_UNDER_PAIRS.length).fill(null);
+    private readonly under_entry_digits: Array<number | null> = new Array(OVER_UNDER_PAIRS.length).fill(null);
+    private pending_even_entry: number | null = null;
+    private pending_odd_entry: number | null = null;
+    private even_entry_digit: number | null = null;
+    private odd_entry_digit: number | null = null;
+
     constructor(readonly capacity: number = ROLLING_WINDOW_SIZE) {
         this.buffer       = new Int8Array(capacity);
         this.rf_buffer    = new Int8Array(capacity);
@@ -199,6 +225,8 @@ export class RollingDigitWindow {
             }
         }
         if (quote !== null) this.prev_quote = quote;
+
+        this.trackEntryPoint(digit);
     }
 
     seed(digits: number[], quotes: number[] = []) {
@@ -207,6 +235,10 @@ export class RollingDigitWindow {
         for (let i = start; i < digits.length; i++) {
             this.push(digits[i], quotes[i] ?? null);
         }
+        // History is available in bulk, so expose its latest qualifying
+        // digits immediately. Live updates still commit strictly every 10
+        // ticks after this point.
+        this.commitPendingEntryPoints();
     }
 
     reset() {
@@ -236,9 +268,48 @@ export class RollingDigitWindow {
         this.prev_quote    = null;
         this.streak        = 0;
         this.last_rf_mv    = null;
+        this.entry_ticks   = 0;
+        this.pending_over_entries.fill(null);
+        this.pending_under_entries.fill(null);
+        this.over_entry_digits.fill(null);
+        this.under_entry_digits.fill(null);
+        this.pending_even_entry = null;
+        this.pending_odd_entry  = null;
+        this.even_entry_digit   = null;
+        this.odd_entry_digit    = null;
     }
 
     getCount(digit: number) { return this.counts[digit] ?? 0; }
+
+    private trackEntryPoint(digit: number) {
+        OVER_UNDER_PAIRS.forEach((pair, index) => {
+            if (digit > pair.over_barrier) this.pending_over_entries[index] = digit;
+            if (digit < pair.under_barrier) this.pending_under_entries[index] = digit;
+        });
+
+        if (digit % 2 === 0) this.pending_even_entry = digit;
+        else this.pending_odd_entry = digit;
+
+        this.entry_ticks += 1;
+        if (this.entry_ticks === 10) this.commitPendingEntryPoints();
+    }
+
+    private commitPendingEntryPoints() {
+        this.pending_over_entries.forEach((digit, index) => {
+            if (digit !== null) this.over_entry_digits[index] = digit;
+        });
+        this.pending_under_entries.forEach((digit, index) => {
+            if (digit !== null) this.under_entry_digits[index] = digit;
+        });
+        if (this.pending_even_entry !== null) this.even_entry_digit = this.pending_even_entry;
+        if (this.pending_odd_entry !== null) this.odd_entry_digit = this.pending_odd_entry;
+
+        this.pending_over_entries.fill(null);
+        this.pending_under_entries.fill(null);
+        this.pending_even_entry = null;
+        this.pending_odd_entry  = null;
+        this.entry_ticks = 0;
+    }
 
     snapshot(): TAnalysisSnapshot {
         const total = this.filled;
@@ -258,7 +329,12 @@ export class RollingDigitWindow {
             last_quote: this.last_quote,
             digits,
             even_odd: this.evenOddStats(total),
-            over_under,
+            over_under: over_under.map((pair, index) => ({
+                ...pair,
+                over_entry_digit: this.over_entry_digits[index],
+                under_entry_digit: this.under_entry_digits[index],
+                entry_ticks: this.entry_ticks,
+            })),
             best_pair: pickBestPair(over_under),
             rise_fall: this.riseFallStats(),
         };
@@ -352,6 +428,9 @@ export class RollingDigitWindow {
             even_count, odd_count, even_percentage, odd_percentage,
             bias: even_count === odd_count ? null : even_count > odd_count ? 'even' : 'odd',
             bias_edge: Math.abs(even_percentage - odd_percentage),
+            even_entry_digit: this.even_entry_digit,
+            odd_entry_digit: this.odd_entry_digit,
+            entry_ticks: this.entry_ticks,
         };
     }
 
@@ -368,6 +447,9 @@ export class RollingDigitWindow {
             ...pair, over_count, under_count, over_percentage, under_percentage,
             best_side: over_count === under_count ? null : over_count > under_count ? 'over' : 'under',
             edge: Math.abs(over_percentage - under_percentage),
+            over_entry_digit: null,
+            under_entry_digit: null,
+            entry_ticks: this.entry_ticks,
         };
     }
 }

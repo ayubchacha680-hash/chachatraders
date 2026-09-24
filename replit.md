@@ -17,7 +17,7 @@ npm run dev        # dev server on port 5000 (Replit workflow)
 npm run build      # production build → dist/
 ```
 
-The Replit workflow `Start application` runs `./node_modules/.bin/rsbuild dev --port 5000` and hot-reloads on changes.
+The Replit workflow `Start application` runs `npm run dev` and hot-reloads on changes. Use Node.js 22 or newer and run `npm ci` if dependencies are missing.
 
 ## Environment variables / secrets
 

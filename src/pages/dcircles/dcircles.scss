@@ -289,6 +289,42 @@
         font-weight: 800;
     }
 
+    &__entry-points {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.7rem;
+        margin-bottom: 0.8rem;
+        padding: 0.55rem 0.7rem;
+        border: 1px solid rgba(255 215 0 / 25%);
+        border-radius: 0.5rem;
+        background: rgba(255 215 0 / 6%);
+        font-size: 1.05rem;
+    }
+
+    &__entry-label {
+        color: var(--dc-muted);
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    &__entry-digit {
+        color: var(--dc-ink);
+
+        strong {
+            color: #9a7600;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.4rem;
+        }
+    }
+
+    &__entry-countdown {
+        margin-inline-start: auto;
+        color: var(--dc-muted);
+        font-size: 0.95rem;
+    }
+
     &__pair-sample {
         color: var(--dc-muted);
         font-size: 0.95rem;

@@ -86,7 +86,7 @@ describe('RollingDigitWindow', () => {
         expect(by_barrier[4]).toMatchObject({ over_count: 5, under_count: 5, over_percentage: 50 });
     });
 
-    it('commits entry-point digits only after each 10-tick block', () => {
+    it('chooses entry points from a rolling 10-tick history and refreshes every 10 ticks', () => {
         const window = new RollingDigitWindow(30);
         pushAll(window, [2, 0, 3, 1, 4, 5, 6, 7, 8, 9]);
 
@@ -109,8 +109,8 @@ describe('RollingDigitWindow', () => {
         const second_block = window.snapshot();
         expect(second_block.even_odd.even_entry_digit).toBe(2);
         expect(second_block.even_odd.odd_entry_digit).toBe(7);
-        expect(second_block.over_under[0].over_entry_digit).toBe(7);
-        expect(second_block.over_under[0].under_entry_digit).toBe(7);
+        expect(second_block.over_under[0].over_entry_digit).toBe(2);
+        expect(second_block.over_under[0].under_entry_digit).toBe(2);
         expect(second_block.even_odd.entry_ticks).toBe(0);
     });
 

@@ -6,6 +6,8 @@
 /** Number of ticks kept in the rolling window. Seeded from history so the
  * window is full from the first render (no growing phase). */
 export const ROLLING_WINDOW_SIZE = 1000;
+/** Number of most recent ticks used to choose each entry-point digit. */
+export const ENTRY_POINT_WINDOW_SIZE = 10;
 
 export type TOverUnderPair = {
     /** Digits strictly greater than this barrier win the Over side. */

@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { DIGIT_SYMBOLS, OVER_UNDER_PAIRS } from '@/constants/analysis';
+import { DIGIT_SYMBOLS, ENTRY_POINT_WINDOW_SIZE, OVER_UNDER_PAIRS } from '@/constants/analysis';
 import { getPublicTickSocket } from '@/services/analysis/public-tick-socket';
-import { RollingDigitWindow, getLastDigit, TDigitStats } from '@/services/analysis/digit-analysis';
+import {
+    RollingDigitWindow,
+    getLastDigit,
+    TDigitStats,
+    TEvenOddStats,
+    TOverUnderStats,
+} from '@/services/analysis/digit-analysis';
 import './dcircles.scss';
 
 const WINDOW_SIZE = 1000;
@@ -92,6 +98,39 @@ const PercentageWindowRow = ({
     </div>
 );
 
+const EntryPointStrip = ({
+    left_label,
+    left_digit,
+    right_label,
+    right_digit,
+    entry_ticks,
+}: {
+    left_label: string;
+    left_digit: number | null;
+    right_label: string;
+    right_digit: number | null;
+    entry_ticks: number;
+}) => {
+    const ticks_until_update = ENTRY_POINT_WINDOW_SIZE - entry_ticks;
+
+    return (
+        <div className='dcircles__entry-points'>
+            <span className='dcircles__entry-label'>
+                {ENTRY_POINT_WINDOW_SIZE}-tick entry history
+            </span>
+            <span className='dcircles__entry-digit'>
+                {left_label} <strong>{left_digit ?? '—'}</strong>
+            </span>
+            <span className='dcircles__entry-digit'>
+                {right_label} <strong>{right_digit ?? '—'}</strong>
+            </span>
+            <span className='dcircles__entry-countdown'>
+                updates in {ticks_until_update} tick{ticks_until_update === 1 ? '' : 's'}
+            </span>
+        </div>
+    );
+};
+
 /* ── Gradient colours per rank ─────────────────────────────────────────── */
 const COLOR_MAP: Record<string, { grad: string; glow: string }> = {
     highest: { grad: 'radial-gradient(circle at 38% 32%, #66ff99 0%, #00cc00 55%, #005500 100%)', glow: '#00cc00' },
@@ -132,6 +171,8 @@ const DCircles = () => {
     const [total_ticks, setTotalTicks]      = useState(0);
     const [status, setStatus]               = useState<string>('idle');
     const [pip_size, setPipSize]            = useState(2);
+    const [entry_pairs, setEntryPairs]      = useState<TOverUnderStats[]>([]);
+    const [entry_even_odd, setEntryEvenOdd] = useState<TEvenOddStats | null>(null);
 
     const window_ref = useRef(new RollingDigitWindow(WINDOW_SIZE));
     const window_25_ref = useRef(new RollingDigitWindow(25));
@@ -153,6 +194,8 @@ const DCircles = () => {
         setCurrentPrice(null);
         setSampleSize(0);
         setTotalTicks(0);
+        setEntryPairs([]);
+        setEntryEvenOdd(null);
         setStatus('connecting');
 
         const socket = getPublicTickSocket();
@@ -173,6 +216,8 @@ const DCircles = () => {
                 setTotalTicks(snap.total_ticks);
                 setCurrentDigit(snap.last_digit);
                 setCurrentPrice(snap.last_quote);
+                setEntryPairs(snap.over_under);
+                setEntryEvenOdd(snap.even_odd);
             },
             onTick: tick => {
                 setPipSize(tick.pip_size);
@@ -193,6 +238,8 @@ const DCircles = () => {
                     setDigits50(snap_50.digits);
                     setSampleSize(snap.sample_size);
                     setTotalTicks(snap.total_ticks);
+                    setEntryPairs(snap.over_under);
+                    setEntryEvenOdd(snap.even_odd);
                 });
             },
             onError: msg => setStatus(`error: ${msg}`),
@@ -324,6 +371,18 @@ const DCircles = () => {
             <section className='dcircles__pairs-panel' aria-label='Over and under percentages'>
                 {OVER_UNDER_PAIRS.slice(0, 3).map(({ over_barrier, under_barrier }) => (
                     <div className='dcircles__pair-card' key={`${over_barrier}-${under_barrier}`}>
+                        {(() => {
+                            const entry_pair = entry_pairs.find(pair => pair.over_barrier === over_barrier);
+                            return entry_pair ? (
+                                <EntryPointStrip
+                                    left_label={`Over ${over_barrier}`}
+                                    left_digit={entry_pair.over_entry_digit}
+                                    right_label={`Under ${under_barrier}`}
+                                    right_digit={entry_pair.under_entry_digit}
+                                    entry_ticks={entry_pair.entry_ticks}
+                                />
+                            ) : null;
+                        })()}
                         <div className='dcircles__pair-header'>
                             <span>Over {over_barrier} vs Under {under_barrier}</span>
                             <span className='dcircles__pair-sample'>Rolling windows</span>
@@ -346,6 +405,18 @@ const DCircles = () => {
             {/* ── Summary percentage cards ── */}
             <section className='dcircles__pairs-panel dcircles__summary-panel' aria-label='Digit summary percentages'>
                 <div className='dcircles__pair-card'>
+                    {(() => {
+                        const entry_pair = entry_pairs.find(pair => pair.over_barrier === 4);
+                        return entry_pair ? (
+                            <EntryPointStrip
+                                left_label='Over 4'
+                                left_digit={entry_pair.over_entry_digit}
+                                right_label='Under 5'
+                                right_digit={entry_pair.under_entry_digit}
+                                entry_ticks={entry_pair.entry_ticks}
+                            />
+                        ) : null;
+                    })()}
                     <div className='dcircles__pair-header'>
                         <span>Over 4 vs Under 5</span>
                         <span className='dcircles__pair-sample'>Rolling windows</span>
@@ -364,6 +435,15 @@ const DCircles = () => {
                 </div>
 
                 <div className='dcircles__pair-card'>
+                    {entry_even_odd && (
+                        <EntryPointStrip
+                            left_label='Even'
+                            left_digit={entry_even_odd.even_entry_digit}
+                            right_label='Odd'
+                            right_digit={entry_even_odd.odd_entry_digit}
+                            entry_ticks={entry_even_odd.entry_ticks}
+                        />
+                    )}
                     <div className='dcircles__pair-header'>
                         <span>Even vs Odd</span>
                         <span className='dcircles__pair-sample'>Rolling windows</span>

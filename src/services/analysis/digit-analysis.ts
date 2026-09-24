@@ -1,4 +1,9 @@
-import { OVER_UNDER_PAIRS, ROLLING_WINDOW_SIZE, TOverUnderPair } from '@/constants/analysis';
+import {
+    ENTRY_POINT_WINDOW_SIZE,
+    OVER_UNDER_PAIRS,
+    ROLLING_WINDOW_SIZE,
+    TOverUnderPair,
+} from '@/constants/analysis';
 
 export type TEvenOddStats = {
     even_count: number;
@@ -126,19 +131,14 @@ export class RollingDigitWindow {
     private streak = 0;
     private last_rf_mv: -1 | 0 | 1 | null = null;
 
-    /**
-     * Entry points are deliberately block-based. A qualifying digit is held as
-     * a candidate while the next ten ticks arrive; only then is it committed
-     * to the snapshot. This prevents the entry marker from jumping on every
-     * tick while still tracking each side independently.
-     */
+    /** Rolling history used to choose the next entry point. */
+    private readonly entry_history = new Int8Array(ENTRY_POINT_WINDOW_SIZE);
+    private entry_history_write = 0;
+    private entry_history_filled = 0;
+    /** Entry points are committed only at the end of each 10-tick period. */
     private entry_ticks = 0;
-    private readonly pending_over_entries: Array<number | null> = new Array(OVER_UNDER_PAIRS.length).fill(null);
-    private readonly pending_under_entries: Array<number | null> = new Array(OVER_UNDER_PAIRS.length).fill(null);
     private readonly over_entry_digits: Array<number | null> = new Array(OVER_UNDER_PAIRS.length).fill(null);
     private readonly under_entry_digits: Array<number | null> = new Array(OVER_UNDER_PAIRS.length).fill(null);
-    private pending_even_entry: number | null = null;
-    private pending_odd_entry: number | null = null;
     private even_entry_digit: number | null = null;
     private odd_entry_digit: number | null = null;
 
@@ -268,13 +268,12 @@ export class RollingDigitWindow {
         this.prev_quote    = null;
         this.streak        = 0;
         this.last_rf_mv    = null;
+        this.entry_history.fill(0);
+        this.entry_history_write = 0;
+        this.entry_history_filled = 0;
         this.entry_ticks   = 0;
-        this.pending_over_entries.fill(null);
-        this.pending_under_entries.fill(null);
         this.over_entry_digits.fill(null);
         this.under_entry_digits.fill(null);
-        this.pending_even_entry = null;
-        this.pending_odd_entry  = null;
         this.even_entry_digit   = null;
         this.odd_entry_digit    = null;
     }
@@ -282,33 +281,59 @@ export class RollingDigitWindow {
     getCount(digit: number) { return this.counts[digit] ?? 0; }
 
     private trackEntryPoint(digit: number) {
-        OVER_UNDER_PAIRS.forEach((pair, index) => {
-            if (digit > pair.over_barrier) this.pending_over_entries[index] = digit;
-            if (digit < pair.under_barrier) this.pending_under_entries[index] = digit;
-        });
-
-        if (digit % 2 === 0) this.pending_even_entry = digit;
-        else this.pending_odd_entry = digit;
+        this.entry_history[this.entry_history_write] = digit;
+        this.entry_history_write = (this.entry_history_write + 1) % ENTRY_POINT_WINDOW_SIZE;
+        this.entry_history_filled = Math.min(this.entry_history_filled + 1, ENTRY_POINT_WINDOW_SIZE);
 
         this.entry_ticks += 1;
-        if (this.entry_ticks === 10) this.commitPendingEntryPoints();
+        if (this.entry_ticks === ENTRY_POINT_WINDOW_SIZE) this.commitPendingEntryPoints();
     }
 
     private commitPendingEntryPoints() {
-        this.pending_over_entries.forEach((digit, index) => {
-            if (digit !== null) this.over_entry_digits[index] = digit;
-        });
-        this.pending_under_entries.forEach((digit, index) => {
-            if (digit !== null) this.under_entry_digits[index] = digit;
-        });
-        if (this.pending_even_entry !== null) this.even_entry_digit = this.pending_even_entry;
-        if (this.pending_odd_entry !== null) this.odd_entry_digit = this.pending_odd_entry;
+        if (this.entry_history_filled === 0) return;
 
-        this.pending_over_entries.fill(null);
-        this.pending_under_entries.fill(null);
-        this.pending_even_entry = null;
-        this.pending_odd_entry  = null;
+        OVER_UNDER_PAIRS.forEach((pair, index) => {
+            this.over_entry_digits[index] = this.pickEntryDigit(digit =>
+                digit > pair.over_barrier
+            );
+            this.under_entry_digits[index] = this.pickEntryDigit(digit =>
+                digit < pair.under_barrier
+            );
+        });
+        this.even_entry_digit = this.pickEntryDigit(digit => digit % 2 === 0);
+        this.odd_entry_digit = this.pickEntryDigit(digit => digit % 2 !== 0);
         this.entry_ticks = 0;
+    }
+
+    /**
+     * Picks the mode from the current rolling 10-tick history. Newer digits
+     * win ties so an equal-frequency history still follows the latest market
+     * touch without changing the entry point on every individual tick.
+     */
+    private pickEntryDigit(matches: (digit: number) => boolean): number | null {
+        const counts = new Array<number>(10).fill(0);
+        for (let offset = 0; offset < this.entry_history_filled; offset += 1) {
+            const index =
+                (this.entry_history_write - 1 - offset + ENTRY_POINT_WINDOW_SIZE) %
+                ENTRY_POINT_WINDOW_SIZE;
+            const digit = this.entry_history[index];
+            if (matches(digit)) counts[digit] += 1;
+        }
+
+        let best_digit: number | null = null;
+        let best_count = 0;
+        // Iterate newest to oldest so `>` keeps the newest digit on ties.
+        for (let offset = 0; offset < this.entry_history_filled; offset += 1) {
+            const index =
+                (this.entry_history_write - 1 - offset + ENTRY_POINT_WINDOW_SIZE) %
+                ENTRY_POINT_WINDOW_SIZE;
+            const digit = this.entry_history[index];
+            if (counts[digit] > best_count) {
+                best_digit = digit;
+                best_count = counts[digit];
+            }
+        }
+        return best_digit;
     }
 
     snapshot(): TAnalysisSnapshot {

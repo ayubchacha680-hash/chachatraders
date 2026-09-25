@@ -31,7 +31,6 @@ import {
 } from '@/utils/trade-type-modal-handler';
 import {
     LabelPairedChartLineCaptionRegularIcon,
-    LabelPairedChartMixedCaptionRegularIcon,
     LabelPairedObjectsColumnCaptionRegularIcon,
     LabelPairedPuzzlePieceTwoCaptionBoldIcon,
 } from '@deriv/quill-icons/LabelPaired';
@@ -48,11 +47,10 @@ import './run-fab.scss';
 const ChartWrapper   = lazy(() => import('../chart/chart-wrapper'));
 const Tutorial       = lazy(() => import('../tutorials'));
 const AIScalperBots  = lazy(() => import('../ai-scalper-bots'));
-const Analysis       = lazy(() => import('../analysis'));
 const FreeBots       = lazy(() => import('../free-bots'));
 const DCircles       = lazy(() => import('../dcircles'));
 
-const PERSISTENT_RUN_PANEL_TABS = [DBOT_TABS.AI_SCALPER_BOTS, DBOT_TABS.ANALYSIS, DBOT_TABS.DCIRCLES];
+const PERSISTENT_RUN_PANEL_TABS = [DBOT_TABS.AI_SCALPER_BOTS, DBOT_TABS.DCIRCLES];
 
 /* ── Ultra-fast Run/Stop floating button ─────────────────────────────────── */
 const RunFab = observer(() => {
@@ -128,7 +126,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'free_bots', 'chart', 'tutorial', 'ai_scalper_bots', 'analysis', 'dcircles'];
+    const hash = ['dashboard', 'bot_builder', 'free_bots', 'chart', 'tutorial', 'ai_scalper_bots', 'dcircles'];
     const { isDesktop } = useDevice();
     const has_persistent_run_panel = PERSISTENT_RUN_PANEL_TABS.includes(active_tab);
     const is_compact_workspace = isDesktop && is_drawer_open && has_persistent_run_panel;
@@ -419,22 +417,7 @@ const AppWrapper = observer(() => {
                                 </Suspense>
                             </div>
 
-                            {/* 6 – Analysis */}
-                            <div
-                                label={
-                                    <>
-                                        <LabelPairedChartMixedCaptionRegularIcon height='24px' width='24px' fill='var(--text-general)' />
-                                        <Localize i18n_default_text='Analysis' />
-                                    </>
-                                }
-                                id='id-analysis'
-                            >
-                                <Suspense fallback={null}>
-                                    <Analysis />
-                                </Suspense>
-                            </div>
-
-                            {/* 7 – DCircles */}
+                            {/* 6 – DCircles */}
                             <div
                                 label={
                                     <>

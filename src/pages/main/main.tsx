@@ -47,12 +47,12 @@ import './run-fab.scss';
 
 const ChartWrapper   = lazy(() => import('../chart/chart-wrapper'));
 const Tutorial       = lazy(() => import('../tutorials'));
-const MultiScanner   = lazy(() => import('../multiscanner'));
+const AIScalperBots  = lazy(() => import('../ai-scalper-bots'));
 const Analysis       = lazy(() => import('../analysis'));
 const FreeBots       = lazy(() => import('../free-bots'));
 const DCircles       = lazy(() => import('../dcircles'));
 
-const PERSISTENT_RUN_PANEL_TABS = [DBOT_TABS.MULTISCANNER, DBOT_TABS.ANALYSIS, DBOT_TABS.DCIRCLES];
+const PERSISTENT_RUN_PANEL_TABS = [DBOT_TABS.AI_SCALPER_BOTS, DBOT_TABS.ANALYSIS, DBOT_TABS.DCIRCLES];
 
 /* ── Ultra-fast Run/Stop floating button ─────────────────────────────────── */
 const RunFab = observer(() => {
@@ -128,7 +128,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'free_bots', 'chart', 'tutorial', 'multiscanner', 'analysis', 'dcircles'];
+    const hash = ['dashboard', 'bot_builder', 'free_bots', 'chart', 'tutorial', 'ai_scalper_bots', 'analysis', 'dcircles'];
     const { isDesktop } = useDevice();
     const has_persistent_run_panel = PERSISTENT_RUN_PANEL_TABS.includes(active_tab);
     const is_compact_workspace = isDesktop && is_drawer_open && has_persistent_run_panel;
@@ -404,18 +404,18 @@ const AppWrapper = observer(() => {
                                 </div>
                             </div>
 
-                            {/* 5 – MultiScanner */}
+                            {/* 5 – AI Scalper Bots */}
                             <div
                                 label={
                                     <>
-                                        <span style={{ fontSize: '1.6rem', lineHeight: '1' }}>📡</span>
-                                        <Localize i18n_default_text='MultiScanner' />
+                                        <span style={{ fontSize: '1.6rem', lineHeight: '1' }}>🧠</span>
+                                        <Localize i18n_default_text='AI Scalper Bots' />
                                     </>
                                 }
-                                id='id-multiscanner'
+                                id='id-ai-scalper-bots'
                             >
                                 <Suspense fallback={null}>
-                                    <MultiScanner />
+                                    <AIScalperBots />
                                 </Suspense>
                             </div>
 

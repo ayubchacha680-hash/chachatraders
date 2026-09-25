@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { observer } from 'mobx-react-lite';
 import { DIGIT_SYMBOLS, ENTRY_POINT_WINDOW_SIZE, OVER_UNDER_PAIRS } from '@/constants/analysis';
+import { useStore } from '@/hooks/useStore';
 import { getPublicTickSocket } from '@/services/analysis/public-tick-socket';
 import {
     RollingDigitWindow,
@@ -160,8 +162,13 @@ function assignColors(digits: TDigitStats[]): Record<number, { grad: string; glo
 }
 
 /* ── Main component ─────────────────────────────────────────────────────── */
-const DCircles = () => {
-    const [symbol, setSymbol]               = useState('R_100');
+const DCircles = observer(() => {
+    const { dashboard } = useStore();
+    const shared_symbol = dashboard.bot_builder_symbol;
+    const initial_symbol = DIGIT_SYMBOLS.some(item => item.symbol === shared_symbol)
+        ? shared_symbol!
+        : 'R_100';
+    const [symbol, setSymbol]               = useState(initial_symbol);
     const [digits, setDigits]               = useState<TDigitStats[]>(emptyDigitStats());
     const [digits_25, setDigits25]          = useState<TDigitStats[]>(emptyDigitStats());
     const [digits_50, setDigits50]          = useState<TDigitStats[]>(emptyDigitStats());
@@ -178,6 +185,18 @@ const DCircles = () => {
     const window_25_ref = useRef(new RollingDigitWindow(25));
     const window_50_ref = useRef(new RollingDigitWindow(50));
     const frame_ref  = useRef<number | null>(null);
+
+    useEffect(() => {
+        if (!dashboard.bot_builder_symbol) {
+            dashboard.setBotBuilderSymbol(symbol);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (shared_symbol && DIGIT_SYMBOLS.some(item => item.symbol === shared_symbol) && shared_symbol !== symbol) {
+            setSymbol(shared_symbol);
+        }
+    }, [shared_symbol]);
 
     /* subscribe to tick stream */
     useEffect(() => {
@@ -279,7 +298,11 @@ const DCircles = () => {
                     <select
                         className='dcircles__select'
                         value={symbol}
-                        onChange={e => setSymbol(e.target.value)}
+                        onChange={e => {
+                            const next_symbol = e.target.value;
+                            setSymbol(next_symbol);
+                            dashboard.setBotBuilderSymbol(next_symbol);
+                        }}
                     >
                         {DIGIT_SYMBOLS.map(s => (
                             <option key={s.symbol} value={s.symbol}>{s.display_name}</option>
@@ -482,6 +505,6 @@ const DCircles = () => {
             </section>
         </div>
     );
-};
+});
 
 export default DCircles;

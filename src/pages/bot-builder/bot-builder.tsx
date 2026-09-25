@@ -62,13 +62,15 @@ const BotBuilder = observer(() => {
     React.useEffect(() => {
         if (!is_bot_builder_active || !window.Blockly?.derivWorkspace) return;
 
+        dashboard.syncBotBuilderWorkspaceSymbol(dashboard.bot_builder_symbol);
+
         const resize_frame = window.requestAnimationFrame(() => {
             onWorkspaceResize();
             window.Blockly?.derivWorkspace?.render?.();
         });
 
         return () => window.cancelAnimationFrame(resize_frame);
-    }, [is_bot_builder_active]);
+    }, [dashboard, dashboard.bot_builder_symbol, is_bot_builder_active, is_loading]);
 
     const handleBlockChangeOnBotRun = (e: Event) => {
         const { is_reset_button_clicked } = toolbar;

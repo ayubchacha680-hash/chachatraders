@@ -21,6 +21,7 @@ import {
     TQuickStrategyContent,
     TUserGuideContent,
 } from '../pages/tutorials/tutorials.types';
+import ApiHelpers from '../external/bot-skeleton/services/api/api-helpers';
 import RootStore from './root-store';
 
 type TDialogOptions = {
@@ -121,6 +122,7 @@ export default class DashboardStore implements IDashboardStore {
             setShowMobileTourDialog: action.bound,
             is_chart_modal_visible: observable,
             is_trading_view_modal_visible: observable,
+            setBotBuilderSymbol: action.bound,
             bot_builder_symbol: observable,
         });
         this.root_store = root_store;
@@ -268,11 +270,64 @@ export default class DashboardStore implements IDashboardStore {
 
     setBotBuilderSymbol = (bot_builder_symbol: string | null) => {
         this.bot_builder_symbol = bot_builder_symbol;
+        this.syncBotBuilderWorkspaceSymbol(bot_builder_symbol);
 
         // Update chart symbol when bot builder symbol changes
         const { chart_store } = this.root_store;
         if (chart_store && bot_builder_symbol) {
             chart_store.onSymbolChange(bot_builder_symbol);
+        }
+    };
+
+    syncBotBuilderWorkspaceSymbol = (symbol: string | null) => {
+        if (!symbol) return;
+
+        const workspace = window.Blockly?.derivWorkspace;
+        const market_block = workspace?.getAllBlocks?.().find(
+            (block: window.Blockly.Block) => block.type === 'trade_definition_market'
+        );
+        const active_symbols = ApiHelpers?.instance?.active_symbols;
+        const symbol_data = active_symbols?.active_symbols?.find((active_symbol: any) => {
+            const active_symbol_code = active_symbol.underlying_symbol || active_symbol.symbol;
+            return active_symbol_code === symbol;
+        });
+
+        if (!market_block || !active_symbols || !symbol_data) return;
+
+        const market_field = market_block.getField('MARKET_LIST');
+        const submarket_field = market_block.getField('SUBMARKET_LIST');
+        const symbol_field = market_block.getField('SYMBOL_LIST');
+        if (!market_field || !submarket_field || !symbol_field) return;
+
+        const event_group = `shared-symbol-${Date.now()}`;
+        const market = symbol_data.market;
+        const submarket = symbol_data.submarket;
+        const current_market = market_field.getValue();
+        const current_submarket = submarket_field.getValue();
+        const current_symbol = symbol_field.getValue();
+
+        if (current_market === market && current_submarket === submarket && current_symbol === symbol) return;
+
+        if (current_market !== market) {
+            market_field.updateOptions(active_symbols.getMarketDropdownOptions(), {
+                default_value: market,
+                should_pretend_empty: true,
+                event_group,
+            });
+        }
+        if (submarket_field.getValue() !== submarket) {
+            submarket_field.updateOptions(active_symbols.getSubmarketDropdownOptions(market), {
+                default_value: submarket,
+                should_pretend_empty: true,
+                event_group,
+            });
+        }
+        if (symbol_field.getValue() !== symbol) {
+            symbol_field.updateOptions(active_symbols.getSymbolDropdownOptions(submarket), {
+                default_value: symbol,
+                should_pretend_empty: true,
+                event_group,
+            });
         }
     };
 

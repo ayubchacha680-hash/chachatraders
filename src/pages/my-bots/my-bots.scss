@@ -1,0 +1,177 @@
+.my-bots {
+    display: flex;
+    height: var(--tab-content-height, calc(100vh - 12rem));
+    flex-direction: column;
+    gap: 1.8rem;
+    overflow-y: auto;
+    padding: 2.4rem;
+    background: var(--general-section-1);
+    color: var(--text-general);
+
+    &__header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 2rem;
+    }
+
+    &__eyebrow {
+        color: var(--brand-red-coral);
+        font: 700 1rem/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+        letter-spacing: 0.16em;
+    }
+
+    &__title {
+        margin: 0.65rem 0;
+        font-size: clamp(2.4rem, 4vw, 3.4rem);
+        font-weight: 800;
+        letter-spacing: -0.04em;
+    }
+
+    &__subtitle {
+        max-width: 65rem;
+        margin: 0;
+        color: var(--text-less-prominent);
+        font-size: 1.3rem;
+        line-height: 1.55;
+    }
+
+    &__count {
+        display: flex;
+        min-width: 6.5rem;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.9rem 1.2rem;
+        border: 1px solid var(--border-normal);
+        border-radius: 0.5rem;
+        color: var(--text-less-prominent);
+
+        strong {
+            color: var(--text-general);
+            font-size: 2rem;
+        }
+
+        span {
+            font-size: 1rem;
+        }
+    }
+
+    &__notice,
+    &__error {
+        margin: 0;
+        padding: 1rem 1.25rem;
+        border-left: 3px solid var(--brand-red-coral);
+        background: var(--general-section-2);
+        font-size: 1.2rem;
+        line-height: 1.5;
+    }
+
+    &__notice {
+        color: var(--text-general);
+    }
+
+    &__error {
+        border-left-color: var(--status-danger);
+        color: var(--status-danger);
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(28rem, 100%), 1fr));
+        gap: 1.2rem;
+        align-content: start;
+    }
+
+    &__card {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 1.2rem;
+        padding: 1.6rem;
+        border: 1px solid var(--border-normal);
+        border-radius: 0.6rem;
+        background: var(--general-section-1);
+        transition: border-color 160ms ease, box-shadow 160ms ease;
+
+        &:hover,
+        &:focus-within {
+            border-color: var(--brand-red-coral);
+            box-shadow: 0 0 0 1px var(--brand-red-coral);
+        }
+
+        &--loaded {
+            border-color: var(--status-success);
+        }
+    }
+
+    &__card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    &__icon {
+        display: grid;
+        width: 3.6rem;
+        height: 3.6rem;
+        place-items: center;
+        border-radius: 0.5rem;
+        background: var(--general-section-2);
+        color: var(--brand-red-coral);
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    &__number {
+        color: var(--text-less-prominent);
+        font: 700 1.1rem ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    &__card-title {
+        margin: 0;
+        font-size: 1.6rem;
+        font-weight: 700;
+    }
+
+    &__card-description {
+        flex: 1;
+        margin: 0;
+        color: var(--text-less-prominent);
+        font-size: 1.2rem;
+        line-height: 1.5;
+    }
+
+    &__load-button {
+        min-height: 3.8rem;
+        padding: 0.8rem 1rem;
+        border: 0;
+        border-radius: 0.35rem;
+        background: var(--brand-red-coral);
+        color: var(--text-prominent);
+        font-size: 1.2rem;
+        font-weight: 700;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            filter: brightness(1.08);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--text-general);
+            outline-offset: 2px;
+        }
+
+        &:disabled {
+            cursor: wait;
+            opacity: 0.65;
+        }
+    }
+
+    @media (max-width: 600px) {
+        padding: 1.2rem;
+
+        &__header {
+            gap: 1rem;
+        }
+    }
+}

@@ -49,6 +49,7 @@ const Tutorial       = lazy(() => import('../tutorials'));
 const AIScalperBots  = lazy(() => import('../ai-scalper-bots'));
 const FreeBots       = lazy(() => import('../free-bots'));
 const DCircles       = lazy(() => import('../dcircles'));
+const MyBots         = lazy(() => import('../my-bots/my-bots'));
 
 const PERSISTENT_RUN_PANEL_TABS = [DBOT_TABS.AI_SCALPER_BOTS, DBOT_TABS.DCIRCLES];
 
@@ -126,7 +127,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'free_bots', 'chart', 'tutorial', 'ai_scalper_bots', 'dcircles'];
+    const hash = ['dashboard', 'bot_builder', 'free_bots', 'chart', 'tutorial', 'ai_scalper_bots', 'dcircles', 'my_bots'];
     const { isDesktop } = useDevice();
     const has_persistent_run_panel = PERSISTENT_RUN_PANEL_TABS.includes(active_tab);
     const is_compact_workspace = isDesktop && is_drawer_open && has_persistent_run_panel;
@@ -429,6 +430,21 @@ const AppWrapper = observer(() => {
                             >
                                 <Suspense fallback={null}>
                                     <DCircles />
+                                </Suspense>
+                            </div>
+
+                            {/* 7 – My Bots */}
+                            <div
+                                label={
+                                    <>
+                                        <span style={{ fontSize: '1.6rem', lineHeight: '1' }} aria-hidden='true'>🤖</span>
+                                        <Localize i18n_default_text='My Bots' />
+                                    </>
+                                }
+                                id='id-my-bots'
+                            >
+                                <Suspense fallback={null}>
+                                    <MyBots />
                                 </Suspense>
                             </div>
 

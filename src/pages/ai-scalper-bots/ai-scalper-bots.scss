@@ -18,6 +18,7 @@
     h2 { margin: 2rem 0 .8rem; font-size: 1.7rem; font-weight: 750; line-height: 1.25; }
     p { margin: 0; font-size: 1.2rem; line-height: 1.5; opacity: .62; }
     &__status { margin-top: auto; padding-top: 1.8rem; color: var(--card-accent); font-size: 1.1rem; font-weight: 700; }
+    &__configure { margin-top: auto; align-self: flex-start; padding: 1.8rem 0 0; border: 0; color: var(--card-accent); background: transparent; cursor: pointer; font: inherit; font-size: 1.1rem; font-weight: 700; }
 }
 
 .matches-scalper { margin-top: 2rem; padding: 2rem; border: 1px solid rgba(75,180,179,.34); border-radius: 1.2rem; background: var(--general-section-1); box-shadow: 0 1.2rem 3rem rgba(0,0,0,.08); &__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; } h2 { margin: 0; font-size: 2rem; } &__status { display: flex; align-items: center; gap: .6rem; padding: .7rem 1rem; border-radius: 2rem; background: var(--general-section-2); font-size: 1.1rem; font-weight: 700; text-transform: capitalize; i { width: .8rem; height: .8rem; border-radius: 50%; background: #9a9a9a; } &--scanning i, &--running i { background: #00c087; box-shadow: 0 0 .8rem #00c087; } &--error i { background: #e86c70; } }

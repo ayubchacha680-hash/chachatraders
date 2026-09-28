@@ -20,7 +20,8 @@ const SCALPER_BOTS = [
 const MatchesScalper = observer(() => {
     const { client, transactions } = useStore();
     const engine_ref = useRef<MatchesScalperEngine | null>(null);
-    const [is_selected, setIsSelected] = useState(true);
+    const [is_selected, setIsSelected] = useState(false);
+    const matches_scalper_ref = useRef<HTMLElement | null>(null);
     const [market, setMarket] = useState(DIGIT_SYMBOLS[0].symbol);
     const [stake, setStake] = useState('1');
     const [martingale, setMartingale] = useState('2');
@@ -104,6 +105,12 @@ const MatchesScalper = observer(() => {
     const ready_count = active_signals.filter(signal => signal.window_size >= 1000).length;
     const aligned_count = active_signals.filter(signal => signal.aligned).length;
 
+    useEffect(() => {
+        if (is_selected) {
+            matches_scalper_ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [is_selected]);
+
     return (
         <main className='ai-scalper-bots'>
             <header className='ai-scalper-bots__header'>
@@ -145,12 +152,25 @@ const MatchesScalper = observer(() => {
                     </div>
                     <h2>Matches Scalper</h2>
                     <p>Match the AI prediction digit on a one-tick contract.</p>
-                    <span className='ai-scalper-bots__status'>Configure below</span>
+                    <button
+                        className='ai-scalper-bots__configure'
+                        type='button'
+                        onClick={() => setIsSelected(true)}
+                        aria-expanded={is_selected}
+                        aria-controls='matches-scalper-config'
+                    >
+                        Configure now
+                    </button>
                 </article>
             </section>
 
             {is_selected && (
-                <section className='matches-scalper' aria-label='Matches Scalper controls'>
+                <section
+                    className='matches-scalper'
+                    id='matches-scalper-config'
+                    ref={matches_scalper_ref}
+                    aria-label='Matches Scalper controls'
+                >
                     <div className='matches-scalper__heading'>
                         <div>
                             <span className='matches-scalper__eyebrow'>No blocks · tickwise execution</span>

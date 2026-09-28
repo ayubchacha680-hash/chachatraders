@@ -98,8 +98,10 @@ export default defineConfig({
   },
   dev: {
     hmr: true,
-    // Allow Replit's proxied preview domain alongside localhost
-    client: { host: process.env.REPLIT_DEV_DOMAIN ?? 'localhost' },
+    // The preview proxy exposes HTTPS on 443, not the local dev-server port.
+    client: process.env.REPLIT_DEV_DOMAIN
+      ? { host: process.env.REPLIT_DEV_DOMAIN, port: 443, protocol: 'wss' }
+      : {},
   },
   tools: {
     rspack: {

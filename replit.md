@@ -17,7 +17,7 @@ npm run dev        # dev server on port 5000 (Replit workflow)
 npm run build      # production build → dist/
 ```
 
-The Replit workflow `Start application` runs `npm run dev` and hot-reloads on changes. Use Node.js 22 or newer and run `npm ci` if dependencies are missing.
+The Replit workflow `Start application` runs `npm run dev` and hot-reloads on changes. The workspace uses Node.js 22; run `npm ci` if dependencies are missing. The server listens on `0.0.0.0:5000` for Replit's web preview.
 
 ## Environment variables / secrets
 
@@ -29,6 +29,8 @@ The Replit workflow `Start application` runs `npm run dev` and hot-reloads on ch
 | `GD_CLIENT_ID` / `GD_APP_ID` / `GD_API_KEY` | No | Google Drive integration for saving/loading strategies |
 
 > Variables are **baked in at build time** via `rsbuild.config.ts` `source.define`. After changing a secret, restart the workflow to rebuild.
+
+The imported workspace already has a Deriv App ID configured. To use OAuth login, make sure the current Replit preview URL is registered as an allowed redirect URI for that App ID in Deriv. Google Drive credentials are optional.
 
 ## Branding
 

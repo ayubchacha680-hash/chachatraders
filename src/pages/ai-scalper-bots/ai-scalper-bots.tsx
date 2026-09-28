@@ -52,7 +52,10 @@ const MatchesScalper = observer(() => {
                 if (next_message) setMessage(next_message);
             }
         );
-        engine.setTransactionHandler(contract => transactions.onBotContractEvent(contract as any));
+        engine.setTransactionHandler(contract => {
+            transactions.onBotContractEvent(contract as any);
+            setProfit(engine.profit);
+        });
         return () => {
             engine.stop();
             engine_ref.current = null;

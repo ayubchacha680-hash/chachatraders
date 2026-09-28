@@ -139,6 +139,12 @@ export default class MatchesScalperEngine {
 
     startScanning(symbols: string[]) {
         this.stopScanning(false);
+        this.windows.clear();
+        this.active_contracts.clear();
+        this.completed_contracts.clear();
+        this.purchase_in_flight = false;
+        this.realized_profit = 0;
+        this.current_stake = this.settings.stake;
         this.symbols = symbols;
         this.symbols.forEach(symbol => this.windows.set(symbol, new DigitWindows()));
         this.setStatus('connecting');
@@ -292,24 +298,30 @@ export default class MatchesScalperEngine {
         const contract = data.proposal_open_contract;
         const contract_id = Number(contract?.contract_id);
         if (!contract || !this.active_contracts.has(contract_id)) return;
+        const is_completed = Boolean(contract.is_sold || contract.is_expired);
+        const already_completed = this.completed_contracts.has(contract_id);
+        let reached_limit = false;
+
+        if (is_completed && !already_completed) {
+            const result = Number(contract.profit ?? Number(contract.sell_price) - Number(contract.buy_price));
+            this.realized_profit += Number.isFinite(result) ? result : 0;
+            this.current_stake = result < 0 ? this.current_stake * this.settings.martingale : this.settings.stake;
+            reached_limit =
+                (this.settings.take_profit > 0 && this.realized_profit >= this.settings.take_profit) ||
+                (this.settings.stop_loss > 0 && this.realized_profit <= -this.settings.stop_loss);
+        }
+
         this.emitContract({
             ...contract,
             underlying_symbol: contract.underlying_symbol,
-            is_completed: Boolean(contract.is_sold || contract.is_expired),
+            is_completed,
         });
-        if (!contract.is_sold && !contract.is_expired) return;
-        if (this.completed_contracts.has(contract_id)) return;
+        if (!is_completed || already_completed) return;
         this.completed_contracts.add(contract_id);
         this.active_contracts.delete(contract_id);
-        const result = Number(contract.profit ?? Number(contract.sell_price) - Number(contract.buy_price));
-        this.realized_profit += Number.isFinite(result) ? result : 0;
-        this.current_stake = result < 0 ? this.current_stake * this.settings.martingale : this.settings.stake;
-        if (
-            (this.settings.take_profit > 0 && this.realized_profit >= this.settings.take_profit) ||
-            (this.settings.stop_loss > 0 && this.realized_profit <= -this.settings.stop_loss)
-        ) {
+        if (reached_limit) {
             this.setStatus('stopped', this.realized_profit >= 0 ? 'Take profit reached.' : 'Stop loss reached.');
-            this.stopScanning(false);
+            this.stop();
         }
     }
 

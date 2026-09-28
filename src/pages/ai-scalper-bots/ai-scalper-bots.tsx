@@ -21,6 +21,7 @@ const MatchesScalper = observer(() => {
     const { client, transactions } = useStore();
     const engine_ref = useRef<MatchesScalperEngine | null>(null);
     const [is_selected, setIsSelected] = useState(false);
+    const [is_compact_view, setIsCompactView] = useState(false);
     const matches_scalper_ref = useRef<HTMLElement | null>(null);
     const [market, setMarket] = useState(DIGIT_SYMBOLS[0].symbol);
     const [stake, setStake] = useState('1');
@@ -113,6 +114,11 @@ const MatchesScalper = observer(() => {
     const ready_count = active_signals.filter(signal => signal.window_size >= 1000).length;
     const aligned_count = active_signals.filter(signal => signal.aligned).length;
 
+    const openConfiguration = () => {
+        setIsSelected(true);
+        setIsCompactView(true);
+    };
+
     useEffect(() => {
         if (is_selected) {
             matches_scalper_ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -120,7 +126,7 @@ const MatchesScalper = observer(() => {
     }, [is_selected]);
 
     return (
-        <main className='ai-scalper-bots'>
+        <main className={`ai-scalper-bots ${is_compact_view ? 'is-compact' : ''}`}>
             <header className='ai-scalper-bots__header'>
                 <div>
                     <span className='ai-scalper-bots__eyebrow'>AI trading suite</span>
@@ -152,7 +158,7 @@ const MatchesScalper = observer(() => {
                     className={`ai-scalper-bots__card ai-scalper-bots__card--teal ai-scalper-bots__card--active ${
                         is_selected ? 'is-selected' : ''
                     }`}
-                    onClick={() => setIsSelected(true)}
+                    onClick={openConfiguration}
                 >
                     <div className='ai-scalper-bots__card-top'>
                         <span className='ai-scalper-bots__icon' aria-hidden='true'>◎</span>
@@ -163,7 +169,7 @@ const MatchesScalper = observer(() => {
                     <button
                         className='ai-scalper-bots__configure'
                         type='button'
-                        onClick={() => setIsSelected(true)}
+                        onClick={openConfiguration}
                         aria-expanded={is_selected}
                         aria-controls='matches-scalper-config'
                     >
@@ -184,9 +190,19 @@ const MatchesScalper = observer(() => {
                             <span className='matches-scalper__eyebrow'>No blocks · automatic tickwise execution</span>
                             <h2>Matches Scalper</h2>
                         </div>
-                        <span className={`matches-scalper__status matches-scalper__status--${status}`}>
-                            <i /> {status === 'running' ? 'Trading' : status === 'scanning' ? 'Scanning' : status}
-                        </span>
+                        <div className='matches-scalper__heading-actions'>
+                            <button
+                                className='matches-scalper__compact-toggle'
+                                type='button'
+                                onClick={() => setIsCompactView(previous => !previous)}
+                                aria-pressed={is_compact_view}
+                            >
+                                {is_compact_view ? 'Expanded view' : 'Compact view'}
+                            </button>
+                            <span className={`matches-scalper__status matches-scalper__status--${status}`}>
+                                <i /> {status === 'running' ? 'Trading' : status === 'scanning' ? 'Scanning' : status}
+                            </span>
+                        </div>
                     </div>
 
                     <div className='matches-scalper__controls'>

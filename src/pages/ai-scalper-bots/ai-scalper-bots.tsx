@@ -79,6 +79,11 @@ const MatchesScalper = observer(() => {
         setMessage('');
         engine_ref.current?.configure(parsed);
         engine_ref.current?.startScanning(selected_symbols);
+        if (client.is_logged_in) {
+            engine_ref.current?.startTrading();
+        } else {
+            setMessage('Scanning is on. Log in to enable automatic trading when signals align.');
+        }
     };
 
     const toggleTrading = () => {
@@ -173,7 +178,7 @@ const MatchesScalper = observer(() => {
                 >
                     <div className='matches-scalper__heading'>
                         <div>
-                            <span className='matches-scalper__eyebrow'>No blocks · tickwise execution</span>
+                            <span className='matches-scalper__eyebrow'>No blocks · automatic tickwise execution</span>
                             <h2>Matches Scalper</h2>
                         </div>
                         <span className={`matches-scalper__status matches-scalper__status--${status}`}>
@@ -211,7 +216,7 @@ const MatchesScalper = observer(() => {
 
                     <div className='matches-scalper__actions'>
                         <button className={`matches-scalper__button matches-scalper__button--scan ${is_scanning ? 'is-on' : ''}`} onClick={toggleScanning}>
-                            <i /> {is_scanning ? 'Scanning ON' : 'Scan markets'}
+                            <i /> {is_scanning ? 'Auto-trading ON' : 'Start auto-trading'}
                         </button>
                         <button className={`matches-scalper__button matches-scalper__button--run ${is_running ? 'is-stop' : ''}`} onClick={toggleTrading}>
                             {is_running ? 'Stop bot' : 'Run bot'}

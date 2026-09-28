@@ -99,6 +99,7 @@ export default class MatchesScalperEngine {
     private readonly windows = new Map<string, DigitWindows>();
     private readonly active_contracts = new Map<number, TActiveContract>();
     private readonly completed_contracts = new Set<number>();
+    private purchase_in_flight = false;
     private symbols: string[] = [];
     private settings: TMatchesScalperSettings = {
         stake: 1,
@@ -156,7 +157,7 @@ export default class MatchesScalperEngine {
                     })
                 );
             });
-            this.setStatus('scanning');
+            this.setStatus(this.api_subscription ? 'running' : 'scanning');
         });
         this.socket.addEventListener('message', event => this.handleMarketMessage(event));
         this.socket.addEventListener('error', () => this.setStatus('error', 'The public market-data connection failed.'));
@@ -232,9 +233,10 @@ export default class MatchesScalperEngine {
 
     private async purchase(signal: TMatchesScalperSignal) {
         const api: any = api_base.api;
-        if (!api || this.active_contracts.size >= 1) return;
+        if (!api || this.active_contracts.size >= 1 || this.purchase_in_flight) return;
         const stake = Number(this.current_stake.toFixed(2));
         if (!Number.isFinite(stake) || stake <= 0) return;
+        this.purchase_in_flight = true;
         try {
             const response = await api.send({
                 buy: '1',
@@ -276,6 +278,8 @@ export default class MatchesScalperEngine {
             api.send({ proposal_open_contract: 1, contract_id, subscribe: 1 });
         } catch (error: any) {
             this.setStatus('error', error?.message ?? 'The bot could not place the trade.');
+        } finally {
+            this.purchase_in_flight = false;
         }
     }
 

@@ -31,6 +31,7 @@ const MatchesScalper = observer(() => {
     const [status, setStatus] = useState<TMatchesScalperStatus>('idle');
     const [message, setMessage] = useState('');
     const [signals, setSignals] = useState<Record<string, TMatchesScalperSignal>>({});
+    const [locked_market, setLockedMarket] = useState<string | null>(null);
     const [profit, setProfit] = useState(0);
 
     const is_scanning = ['connecting', 'scanning', 'running'].includes(status);
@@ -46,6 +47,7 @@ const MatchesScalper = observer(() => {
         engine.setHandlers(
             signal => {
                 setSignals(previous => ({ ...previous, [signal.symbol]: signal }));
+                if (engine.lockedSymbol) setLockedMarket(engine.lockedSymbol);
                 setProfit(engine.profit);
             },
             (next_status, next_message) => {
@@ -81,8 +83,9 @@ const MatchesScalper = observer(() => {
             return;
         }
         setMessage('');
-        engine_ref.current?.configure(parsed);
-        engine_ref.current?.startScanning(selected_symbols);
+        if (!engine_ref.current?.startScanning(selected_symbols)) return;
+        engine_ref.current.configure(parsed);
+        setLockedMarket(null);
         if (client.is_logged_in) {
             engine_ref.current?.startTrading();
         } else {
@@ -247,6 +250,13 @@ const MatchesScalper = observer(() => {
                         <div><span>Aligned now</span><strong>{aligned_count}</strong></div>
                         <div><span>Session P/L</span><strong className={profit >= 0 ? 'is-positive' : 'is-negative'}>{profit.toFixed(2)} {client.currency}</strong></div>
                     </div>
+
+                    {locked_market && (
+                        <p className='matches-scalper__locked-market' aria-live='polite'>
+                            Locked market: <strong>{DIGIT_SYMBOLS.find(item => item.symbol === locked_market)?.display_name ?? locked_market}</strong>
+                            {' '}· The bot will keep trading this market until you stop it or a profit/loss limit is reached.
+                        </p>
+                    )}
 
                     {message && <p className='matches-scalper__message'>{message}</p>}
 

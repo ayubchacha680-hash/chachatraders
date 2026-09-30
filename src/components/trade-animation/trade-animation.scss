@@ -255,24 +255,21 @@
 
                 &.active {
                     .dynamic-circle {
-                        animation: animate-circle 0.8s infinite;
-                        animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+                        animation: none;
                         background-color: var(--status-success);
-
-                        // transform: translate(-50%, -50%);
-                        // z-index: 1;
+                        opacity: 0;
                     }
                 }
 
                 .static-circle {
-                    animation: animate-circle-appear 1s;
+                    animation: none;
                     background-color: $COLOR_CORAL_RED;
                 }
 
                 .dynamic-circle {
-                    animation: animate-circle 1s;
+                    animation: none;
                     background-color: $COLOR_CORAL_RED;
-                    transform: scale(0);
+                    opacity: 0;
                 }
             }
         }

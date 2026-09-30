@@ -110,6 +110,7 @@ export default class MatchesScalperEngine {
     };
     private current_stake = 1;
     private realized_profit = 0;
+    private locked_symbol: string | null = null;
     private status: TMatchesScalperStatus = 'idle';
     private on_analysis?: TAnalysisHandler;
     private on_status?: TStatusHandler;
@@ -137,7 +138,15 @@ export default class MatchesScalperEngine {
         return this.status;
     }
 
+    get lockedSymbol() {
+        return this.locked_symbol;
+    }
+
     startScanning(symbols: string[]) {
+        if (this.active_contracts.size > 0 || this.purchase_in_flight) {
+            this.setStatus('stopped', 'Wait for the open one-tick trade to settle before starting another session.');
+            return false;
+        }
         this.stopScanning(false);
         this.windows.clear();
         this.active_contracts.clear();
@@ -145,6 +154,7 @@ export default class MatchesScalperEngine {
         this.purchase_in_flight = false;
         this.realized_profit = 0;
         this.current_stake = this.settings.stake;
+        this.locked_symbol = null;
         this.symbols = symbols;
         this.symbols.forEach(symbol => this.windows.set(symbol, new DigitWindows()));
         this.setStatus('connecting');
@@ -170,6 +180,7 @@ export default class MatchesScalperEngine {
         this.socket.addEventListener('close', () => {
             if (this.socket) this.setStatus('stopped');
         });
+        return true;
     }
 
     stopScanning(mark_stopped = true) {
@@ -179,11 +190,11 @@ export default class MatchesScalperEngine {
     }
 
     stop() {
-        this.stopScanning();
-        this.api_subscription?.unsubscribe();
-        this.api_subscription = null;
-        this.active_contracts.clear();
+        this.stopScanning(false);
         this.setStatus('stopped');
+        // A manual stop prevents new purchases. Any already-bought one-tick
+        // contract is allowed to settle and remains tracked for the session P/L.
+        if (this.active_contracts.size === 0 && !this.purchase_in_flight) this.unsubscribeTrading();
     }
 
     startTrading() {
@@ -198,6 +209,13 @@ export default class MatchesScalperEngine {
         this.api_subscription?.unsubscribe();
         this.api_subscription = api_base.api.onMessage().subscribe(({ data }) => this.handleTradingMessage(data));
         this.setStatus('running');
+        // Scanning may have found an aligned market before the user logged in or
+        // enabled trading. Lock that market immediately instead of waiting for a
+        // new alignment that may not happen for a while.
+        this.symbols.forEach(symbol => {
+            const window = this.windows.get(symbol);
+            if (window) this.publishSignal(symbol, window, null);
+        });
         return true;
     }
 
@@ -231,8 +249,11 @@ export default class MatchesScalperEngine {
 
     private publishSignal(symbol: string, window: DigitWindows, last_digit: number | null) {
         const signal = window.signal(symbol, last_digit);
+        if (this.status === 'running' && !this.locked_symbol && signal.aligned) {
+            this.locked_symbol = symbol;
+        }
         this.on_analysis?.(signal);
-        if (this.status === 'running' && signal.aligned) {
+        if (this.status === 'running' && this.locked_symbol === symbol) {
             void this.purchase(signal);
         }
     }
@@ -283,9 +304,12 @@ export default class MatchesScalperEngine {
             });
             api.send({ proposal_open_contract: 1, contract_id, subscribe: 1 });
         } catch (error: any) {
-            this.setStatus('error', error?.message ?? 'The bot could not place the trade.');
+            if (this.status === 'running') {
+                this.setStatus('error', error?.message ?? 'The bot could not place the trade.');
+            }
         } finally {
             this.purchase_in_flight = false;
+            if (this.status !== 'running' && this.active_contracts.size === 0) this.unsubscribeTrading();
         }
     }
 
@@ -322,7 +346,14 @@ export default class MatchesScalperEngine {
         if (reached_limit) {
             this.setStatus('stopped', this.realized_profit >= 0 ? 'Take profit reached.' : 'Stop loss reached.');
             this.stop();
+        } else if (this.status !== 'running' && this.active_contracts.size === 0) {
+            this.unsubscribeTrading();
         }
+    }
+
+    private unsubscribeTrading() {
+        this.api_subscription?.unsubscribe();
+        this.api_subscription = null;
     }
 
     private emitContract(contract: any) {
